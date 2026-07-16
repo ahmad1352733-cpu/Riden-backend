@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/captain/"
+title = "RIDEN - Captain App"
+version = "1.0.0"
+id = "artifacts/riden-captain"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/captain/" ]
+localPort = 22334
+
+[services.development]
+run = "pnpm --filter @workspace/riden-captain run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/riden-captain", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/riden-captain/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22334"
+BASE_PATH = "/captain/"

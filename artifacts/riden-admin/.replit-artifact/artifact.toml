@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/admin/"
+title = "RIDEN - Admin Panel"
+version = "1.0.0"
+id = "artifacts/riden-admin"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/admin/" ]
+localPort = 19631
+
+[services.development]
+run = "pnpm --filter @workspace/riden-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/riden-admin", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/riden-admin/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19631"
+BASE_PATH = "/admin/"
