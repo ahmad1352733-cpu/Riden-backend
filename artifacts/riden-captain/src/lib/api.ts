@@ -1,6 +1,6 @@
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 
-setBaseUrl("/api");
+setBaseUrl("");
 setAuthTokenGetter(() => localStorage.getItem("riden_token"));
 
 export {};
