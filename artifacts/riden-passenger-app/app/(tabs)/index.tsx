@@ -18,54 +18,57 @@ import {
   useRateTrip,
   useUpdatePassengerLocation,
 } from '@workspace/api-client-react';
+import RidenMap from '@/components/RidenMap';
 
-// ─── مناطق عمّان ────────────────────────────────────────────────────────────
+// ─── مناطق عمّان ─────────────────────────────────────────────────────────────
 const AREAS = [
-  { id: 1,  name: 'وسط البلد',          lat: 31.9539, lng: 35.9106 },
-  { id: 2,  name: 'مطار الملكة علياء',  lat: 31.7228, lng: 35.9920 },
-  { id: 3,  name: 'الصويفرة',           lat: 31.9556, lng: 35.8858 },
-  { id: 4,  name: 'جامعة الأردن',       lat: 32.0138, lng: 35.8721 },
-  { id: 5,  name: 'العبدلي',            lat: 31.9729, lng: 35.9221 },
-  { id: 6,  name: 'مول مكة',            lat: 31.9371, lng: 35.8593 },
-  { id: 7,  name: 'الزرقاء',            lat: 32.0727, lng: 36.0877 },
-  { id: 8,  name: 'الرابية',            lat: 31.9796, lng: 35.9076 },
-  { id: 9,  name: 'الجبيهة',            lat: 32.0277, lng: 35.8687 },
-  { id: 10, name: 'دابوق',              lat: 32.0161, lng: 35.8436 },
+  { id: 1,  name: 'وسط البلد',           lat: 31.9539, lng: 35.9106 },
+  { id: 2,  name: 'مطار الملكة علياء',   lat: 31.7228, lng: 35.9920 },
+  { id: 3,  name: 'الصويفرة',            lat: 31.9556, lng: 35.8858 },
+  { id: 4,  name: 'جامعة الأردن',        lat: 32.0138, lng: 35.8721 },
+  { id: 5,  name: 'العبدلي',             lat: 31.9729, lng: 35.9221 },
+  { id: 6,  name: 'مول مكة',             lat: 31.9371, lng: 35.8593 },
+  { id: 7,  name: 'الزرقاء',             lat: 32.0727, lng: 36.0877 },
+  { id: 8,  name: 'الرابية',             lat: 31.9796, lng: 35.9076 },
+  { id: 9,  name: 'الجبيهة',             lat: 32.0277, lng: 35.8687 },
+  { id: 10, name: 'دابوق',               lat: 32.0161, lng: 35.8436 },
   { id: 11, name: 'شارع المدينة المنورة', lat: 31.9649, lng: 35.8710 },
-  { id: 12, name: 'السابع',             lat: 31.9776, lng: 35.9400 },
+  { id: 12, name: 'السابع',              lat: 31.9776, lng: 35.9400 },
 ];
 
 function distKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
 const STATUS_INFO: Record<string, { text: string; color: string; icon: string }> = {
   pending:  { text: 'جاري البحث عن كابتن...', color: '#F59E0B', icon: 'loader' },
   accepted: { text: 'الكابتن في الطريق إليك ✓', color: '#22C55E', icon: 'truck' },
-  started:  { text: 'الرحلة جارية 🚗', color: '#3B82F6', icon: 'navigation' },
+  started:  { text: 'الرحلة جارية 🚗',          color: '#3B82F6', icon: 'navigation' },
 };
 
 export default function HomeScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
+  const colors  = useColors();
+  const insets  = useSafeAreaInsets();
   const { user } = useAuth();
-  const [userLoc, setUserLoc] = useState({ lat: 31.9539, lng: 35.9106 });
-  const [pickup, setPickup] = useState<typeof AREAS[0] | null>(null);
-  const [dropoff, setDropoff] = useState<typeof AREAS[0] | null>(null);
-  const [discountCode, setDiscountCode] = useState('');
-  const [pickingFor, setPickingFor] = useState<'pickup' | 'dropoff' | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-  const [showCancelSheet, setShowCancelSheet] = useState(false);
-  const [showRating, setShowRating] = useState(false);
-  const [ratingTripId, setRatingTripId] = useState<number | null>(null);
+
+  const [userLoc,        setUserLoc]        = useState({ lat: 31.9539, lng: 35.9106 });
+  const [pickup,         setPickup]         = useState<typeof AREAS[0] | null>(null);
+  const [dropoff,        setDropoff]        = useState<typeof AREAS[0] | null>(null);
+  const [discountCode,   setDiscountCode]   = useState('');
+  const [pickingFor,     setPickingFor]     = useState<'pickup' | 'dropoff' | null>(null);
+  const [cancelReason,   setCancelReason]   = useState('');
+  const [showCancelSheet,setShowCancelSheet]= useState(false);
+  const [showRating,     setShowRating]     = useState(false);
+  const [ratingTripId,   setRatingTripId]   = useState<number | null>(null);
   const [selectedRating, setSelectedRating] = useState(5);
-  const [fareData, setFareData] = useState<any>(null);
+  const [fareData,       setFareData]       = useState<any>(null);
+
   const startedTripIdRef = useRef<number | null>(null);
-  const prevActiveRef = useRef(false);
+  const prevActiveRef    = useRef(false);
 
   // ─── GPS الراكب ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -78,22 +81,18 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  // ─── استعلام الرحلة النشطة ───────────────────────────────────────────────
+  // ─── الرحلة النشطة ───────────────────────────────────────────────────────
   const { data: activeTrip, refetch: refetchTrip } = useGetActiveTrip({
     query: { refetchInterval: 5000 },
   } as any);
 
-  const trip = activeTrip as any;
-  const captain = trip?.captain;
-  const status = trip?.status;
-  const tripId = trip?.id ?? 0;
+  const trip       = activeTrip as any;
+  const captain    = trip?.captain;
+  const status     = trip?.status;
+  const tripId     = trip?.id ?? 0;
   const statusInfo = STATUS_INFO[status] ?? null;
 
-  // تتبع الرحلة المنتهية للتقييم
-  useEffect(() => {
-    if (status === 'started') startedTripIdRef.current = tripId;
-  }, [status, tripId]);
-
+  useEffect(() => { if (status === 'started') startedTripIdRef.current = tripId; }, [status, tripId]);
   useEffect(() => {
     const isActive = !!trip;
     if (prevActiveRef.current && !isActive && startedTripIdRef.current) {
@@ -106,18 +105,12 @@ export default function HomeScreen() {
 
   // ─── تتبع موقع الكابتن ───────────────────────────────────────────────────
   const { data: tracking } = useGetTripTracking({ id: tripId }, {
-    query: {
-      enabled: !!tripId && !!trip?.captainId,
-      refetchInterval: 4000,
-    },
+    query: { enabled: !!tripId && !!trip?.captainId, refetchInterval: 4000 },
   } as any);
 
-  // ─── إرسال موقع الراكب للسيرفر ──────────────────────────────────────────
   const passengerLocMutation = useUpdatePassengerLocation();
-
   useEffect(() => {
     if (!tripId || !['pending', 'accepted', 'started'].includes(status ?? '')) return;
-
     const send = async () => {
       try {
         const { status: perm } = await Location.requestForegroundPermissionsAsync();
@@ -128,7 +121,6 @@ export default function HomeScreen() {
         passengerLocMutation.mutate({ id: tripId, data: { lat: latitude, lng: longitude } } as any);
       } catch { /* ignore */ }
     };
-
     send();
     const interval = setInterval(send, 20000);
     return () => clearInterval(interval);
@@ -151,19 +143,14 @@ export default function HomeScreen() {
 
   const cancelMutation = useCancelTrip({
     mutation: {
-      onSuccess: () => {
-        setShowCancelSheet(false);
-        setCancelReason('');
-        refetchTrip();
-      },
+      onSuccess: () => { setShowCancelSheet(false); setCancelReason(''); refetchTrip(); },
     },
   } as any);
 
   const rateMutation = useRateTrip({
     mutation: {
       onSuccess: () => {
-        setShowRating(false);
-        setRatingTripId(null);
+        setShowRating(false); setRatingTripId(null);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       },
     },
@@ -172,7 +159,7 @@ export default function HomeScreen() {
   const handleEstimate = () => {
     if (!pickup || !dropoff) return;
     const dist = distKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
-    const dur = Math.ceil(dist * 2.5);
+    const dur  = Math.ceil(dist * 2.5);
     estimateMutation.mutate({ data: { distanceKm: dist, durationMin: dur, discountCode: discountCode || undefined } } as any);
   };
 
@@ -188,51 +175,61 @@ export default function HomeScreen() {
     } as any);
   };
 
-  const callCaptain = () => {
-    if (captain?.phone) Linking.openURL(`tel:${captain.phone}`);
-  };
+  const callCaptain = () => { if (captain?.phone) Linking.openURL(`tel:${captain.phone}`); };
 
-  const trackingData = tracking as any;
-  const captainCoord = trackingData?.captainLat
-    ? { latitude: trackingData.captainLat, longitude: trackingData.captainLng }
+  // ─── مؤشرات الخريطة ──────────────────────────────────────────────────────
+  const trackingData  = tracking as any;
+  const captainCoord  = trackingData?.captainLat
+    ? { lat: trackingData.captainLat, lng: trackingData.captainLng }
     : null;
+
+  const mapMarkers = [];
+  // موقع الراكب دائماً
+  mapMarkers.push({ lat: userLoc.lat, lng: userLoc.lng, color: '#6366F1', label: 'أنت', pulse: !!trip });
+  // نقطة الانطلاق المختارة
+  if (!trip && pickup) {
+    mapMarkers.push({ lat: pickup.lat, lng: pickup.lng, color: '#F59E0B', label: 'الانطلاق' });
+  }
+  // الوجهة المختارة
+  if (!trip && dropoff) {
+    mapMarkers.push({ lat: dropoff.lat, lng: dropoff.lng, color: '#22C55E', label: 'الوجهة' });
+  }
+  // موقع الكابتن عند الرحلة
+  if (trip && captainCoord) {
+    mapMarkers.push({ lat: captainCoord.lat, lng: captainCoord.lng, color: '#F59E0B', label: 'الكابتن', pulse: true });
+  }
+
+  // مركز الخريطة
+  const mapCenter = trip && captainCoord
+    ? { lat: (userLoc.lat + captainCoord.lat) / 2, lng: (userLoc.lng + captainCoord.lng) / 2 }
+    : pickup && dropoff
+      ? { lat: (pickup.lat + dropoff.lat) / 2, lng: (pickup.lng + dropoff.lng) / 2 }
+      : pickup
+        ? { lat: pickup.lat, lng: pickup.lng }
+        : userLoc;
+
+  const mapZoom = (trip && captainCoord) || (pickup && dropoff) ? 12 : 14;
 
   const s = styles(colors, insets);
 
   return (
-    <View style={[s.root, { backgroundColor: colors.background }]}>
-      {/* ─── الهيدر ─── */}
-      <View style={[s.header, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16) }]}>
-        <Text style={s.greeting}>مرحباً، {user?.name?.split(' ')[0] ?? 'راكب'} 👋</Text>
-        {!trip && <Text style={s.subGreeting}>إلى أين تريد الذهاب؟</Text>}
-        {trip && statusInfo && (
-          <View style={[s.statusBadgeHeader, { backgroundColor: statusInfo.color + '25', borderColor: statusInfo.color }]}>
-            <Feather name={statusInfo.icon as any} size={13} color={statusInfo.color} />
-            <Text style={[s.statusHeaderTxt, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-          </View>
-        )}
-        {/* مؤشر المسار */}
-        {(pickup || dropoff || trip) && (
-          <View style={s.routeIndicator}>
-            <View style={s.routeIndicatorRow}>
-              <View style={[s.routeDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={s.routeIndicatorTxt} numberOfLines={1}>
-                {trip ? trip.pickupAddress : pickup?.name ?? 'نقطة الانطلاق'}
-              </Text>
+    <View style={s.root}>
+
+      {/* ─── الخريطة — النصف العلوي ─── */}
+      <View style={s.mapContainer}>
+        <RidenMap center={mapCenter} zoom={mapZoom} markers={mapMarkers} style={{ flex: 1 }} />
+
+        {/* معلومات الحالة فوق الخريطة */}
+        <View style={[s.mapOverlay, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16) }]}>
+          <Text style={s.greeting}>مرحباً، {user?.name?.split(' ')[0] ?? 'راكب'} 👋</Text>
+          {!trip && <Text style={s.subGreeting}>إلى أين تريد الذهاب؟</Text>}
+          {trip && statusInfo && (
+            <View style={[s.statusBadge, { backgroundColor: statusInfo.color + '25', borderColor: statusInfo.color }]}>
+              <Feather name={statusInfo.icon as any} size={13} color={statusInfo.color} />
+              <Text style={[s.statusTxt, { color: statusInfo.color }]}>{statusInfo.text}</Text>
             </View>
-            {(dropoff || trip) && (
-              <>
-                <View style={s.routeIndicatorLine} />
-                <View style={s.routeIndicatorRow}>
-                  <View style={[s.routeDot, { backgroundColor: '#22C55E' }]} />
-                  <Text style={s.routeIndicatorTxt} numberOfLines={1}>
-                    {trip ? trip.dropoffAddress : dropoff?.name ?? 'الوجهة'}
-                  </Text>
-                </View>
-              </>
-            )}
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       {/* ─── اللوح السفلي ─── */}
@@ -241,15 +238,6 @@ export default function HomeScreen() {
         {trip ? (
           /* ─── رحلة نشطة ─── */
           <View style={{ gap: 10 }}>
-            {/* حالة الرحلة */}
-            {statusInfo && (
-              <View style={[s.statusBadge, { backgroundColor: statusInfo.color + '20', borderColor: statusInfo.color }]}>
-                <Feather name={statusInfo.icon as any} size={14} color={statusInfo.color} />
-                <Text style={[s.statusTxt, { color: statusInfo.color }]}>{statusInfo.text}</Text>
-              </View>
-            )}
-
-            {/* المسار */}
             <View style={s.routeCard}>
               <View style={s.routeRow}>
                 <Feather name="circle" size={10} color="#F59E0B" />
@@ -262,7 +250,6 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* بطاقة الكابتن الكاملة */}
             {captain && (
               <View style={s.captainCard}>
                 <View style={s.captainLeft}>
@@ -276,14 +263,8 @@ export default function HomeScreen() {
                 </View>
                 <View style={s.captainInfo}>
                   <Text style={s.captainName}>{captain.name}</Text>
-                  <Text style={s.captainCar}>
-                    {captain.vehicleColor} {captain.vehicleMake} {captain.vehicleModel} ({captain.vehicleYear})
-                  </Text>
-                  <View style={s.plateRow}>
-                    <Feather name="credit-card" size={11} color={colors.mutedForeground} />
-                    <Text style={s.plateNum}>{captain.vehiclePlate}</Text>
-                  </View>
-                  <Text style={s.captainPhone}>{captain.phone}</Text>
+                  <Text style={s.captainCar}>{captain.vehicleColor} {captain.vehicleMake} {captain.vehicleModel}</Text>
+                  <Text style={s.plateNum}>{captain.vehiclePlate}</Text>
                 </View>
                 <TouchableOpacity style={s.callBtn} onPress={callCaptain}>
                   <Feather name="phone" size={20} color="#fff" />
@@ -291,7 +272,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* الأجرة المتوقعة */}
             {status === 'started' && trip.fare && (
               <View style={s.fareNote}>
                 <Feather name="dollar-sign" size={14} color={colors.primary} />
@@ -299,7 +279,6 @@ export default function HomeScreen() {
               </View>
             )}
 
-            {/* إلغاء */}
             {(status === 'pending' || status === 'accepted') && (
               <TouchableOpacity style={s.cancelBtn} onPress={() => setShowCancelSheet(true)}>
                 <Feather name="x-circle" size={15} color={colors.destructive} />
@@ -344,18 +323,6 @@ export default function HomeScreen() {
                   <Text style={s.fareLabel}>أجرة الانطلاق</Text>
                   <Text style={s.fareVal}>{fareData.baseFare?.toFixed(2)} د.أ</Text>
                 </View>
-                {fareData.distanceFare > 0 && (
-                  <View style={s.fareRow}>
-                    <Text style={s.fareLabel}>أجرة المسافة</Text>
-                    <Text style={s.fareVal}>{fareData.distanceFare?.toFixed(2)} د.أ</Text>
-                  </View>
-                )}
-                {fareData.timeFare > 0 && (
-                  <View style={s.fareRow}>
-                    <Text style={s.fareLabel}>أجرة الوقت</Text>
-                    <Text style={s.fareVal}>{fareData.timeFare?.toFixed(2)} د.أ</Text>
-                  </View>
-                )}
                 {fareData.discountAmount > 0 && (
                   <View style={s.fareRow}>
                     <Text style={[s.fareLabel, { color: '#22C55E' }]}>خصم {fareData.discountPercent}%</Text>
@@ -432,12 +399,10 @@ export default function HomeScreen() {
             <Text style={s.modalTitle}>إلغاء الرحلة</Text>
             <TextInput
               style={[s.discountInput, { minHeight: 80, textAlignVertical: 'top' }]}
-              value={cancelReason}
-              onChangeText={setCancelReason}
+              value={cancelReason} onChangeText={setCancelReason}
               placeholder="سبب الإلغاء (اختياري)"
               placeholderTextColor={colors.mutedForeground}
-              multiline
-              textAlign="right"
+              multiline textAlign="right"
             />
             <TouchableOpacity style={s.cancelBtnFull}
               onPress={() => cancelMutation.mutate({ id: trip?.id, data: { reason: cancelReason } } as any)}>
@@ -460,11 +425,9 @@ export default function HomeScreen() {
             <Text style={[s.modalTitle, { textAlign: 'center', fontSize: 20 }]}>قيّم تجربتك</Text>
             <Text style={s.ratingSubtitle}>كيف كانت الرحلة مع الكابتن؟</Text>
             <View style={s.starsRow}>
-              {[1, 2, 3, 4, 5].map(star => (
+              {[1,2,3,4,5].map(star => (
                 <TouchableOpacity key={star} onPress={() => { setSelectedRating(star); Haptics.selectionAsync(); }}>
-                  <Feather
-                    name="star"
-                    size={42}
+                  <Feather name="star" size={42}
                     color={star <= selectedRating ? '#F59E0B' : colors.border}
                     style={{ marginHorizontal: 4 }}
                   />
@@ -489,136 +452,124 @@ export default function HomeScreen() {
 }
 
 const styles = (c: ReturnType<typeof useColors>, insets: any) => StyleSheet.create({
-  root: { flex: 1 },
-  header: {
-    backgroundColor: '#0F1B2D', paddingHorizontal: 20, paddingBottom: 20, gap: 10,
+  root:        { flex: 1, backgroundColor: c.background },
+
+  // ─── الخريطة ───
+  mapContainer: { flex: 1, position: 'relative' },
+  mapOverlay:   {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    paddingHorizontal: 20, paddingBottom: 12, gap: 8,
   },
-  greeting: { fontSize: 16, fontWeight: '700', color: '#fff', textAlign: 'right' },
-  subGreeting: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
-  statusBadgeHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, alignSelf: 'flex-end',
-  },
-  statusHeaderTxt: { fontSize: 13, fontWeight: '600' },
-  routeIndicator: {
-    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14,
-    padding: 12, gap: 6,
-  },
-  routeIndicatorRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
-  routeDot: { width: 10, height: 10, borderRadius: 5 },
-  routeIndicatorTxt: { flex: 1, fontSize: 13, color: '#fff', textAlign: 'right' },
-  routeIndicatorLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginRight: 9 },
-  sheet: {
-    flex: 1,
-    backgroundColor: c.card,
-    padding: 20, borderTopLeftRadius: 0, borderTopRightRadius: 0,
-  },
+  greeting:    { fontSize: 16, fontWeight: '700', color: '#fff', textAlign: 'right',
+    textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  subGreeting: { fontSize: 13, color: 'rgba(255,255,255,0.8)', textAlign: 'right',
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   statusBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14, borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-end',
+    borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1,
   },
-  statusTxt: { fontSize: 14, fontWeight: '600' },
+  statusTxt:   { fontSize: 13, fontWeight: '600' },
+
+  // ─── اللوح السفلي ───
+  sheet: {
+    backgroundColor: c.card, padding: 16,
+    borderTopWidth: 1, borderTopColor: c.border,
+    maxHeight: '52%',
+  },
   routeCard: {
-    backgroundColor: c.background, borderRadius: 14, padding: 14,
+    backgroundColor: c.background, borderRadius: 14, padding: 12,
     borderWidth: 1, borderColor: c.border, gap: 8,
   },
-  routeRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
-  routeTxt: { flex: 1, fontSize: 13, color: c.foreground, textAlign: 'right' },
+  routeRow:  { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+  routeTxt:  { flex: 1, fontSize: 13, color: c.foreground, textAlign: 'right' },
   routeLine: { height: 1, backgroundColor: c.border, marginLeft: 14 },
-  // ─── بطاقة الكابتن ───
   captainCard: {
-    backgroundColor: c.background, borderRadius: 16, padding: 14,
+    backgroundColor: c.background, borderRadius: 14, padding: 12,
     borderWidth: 1, borderColor: c.border,
-    flexDirection: 'row-reverse', alignItems: 'center', gap: 12,
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 10,
   },
-  captainLeft: { alignItems: 'center', gap: 4 },
-  captainAvatar: {
-    width: 52, height: 52, borderRadius: 26,
+  captainLeft:     { alignItems: 'center', gap: 4 },
+  captainAvatar:   {
+    width: 48, height: 48, borderRadius: 24,
     backgroundColor: '#F59E0B20', borderWidth: 2, borderColor: '#F59E0B',
     alignItems: 'center', justifyContent: 'center',
   },
-  captainAvatarText: { fontSize: 22, fontWeight: '800', color: '#F59E0B' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  ratingVal: { fontSize: 13, fontWeight: '700', color: '#F59E0B' },
-  captainInfo: { flex: 1, alignItems: 'flex-end', gap: 2 },
-  captainName: { fontSize: 16, fontWeight: '700', color: c.foreground },
-  captainCar: { fontSize: 12, color: c.mutedForeground },
-  plateRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  plateNum: { fontSize: 13, fontWeight: '700', color: c.primary, letterSpacing: 1 },
-  captainPhone: { fontSize: 13, color: c.mutedForeground, marginTop: 2 },
+  captainAvatarText: { fontSize: 20, fontWeight: '800', color: '#F59E0B' },
+  ratingRow:       { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  ratingVal:       { fontSize: 12, fontWeight: '700', color: '#F59E0B' },
+  captainInfo:     { flex: 1, alignItems: 'flex-end', gap: 2 },
+  captainName:     { fontSize: 15, fontWeight: '700', color: c.foreground },
+  captainCar:      { fontSize: 12, color: c.mutedForeground },
+  plateNum:        { fontSize: 13, fontWeight: '700', color: c.primary },
   callBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: '#22C55E', alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#22C55E', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 6,
-    elevation: 6,
+    elevation: 4,
   },
   fareNote: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: c.background, borderRadius: 10, padding: 10,
     borderWidth: 1, borderColor: c.border,
   },
-  fareNoteTxt: { color: c.foreground, fontSize: 14, fontWeight: '600' },
+  fareNoteTxt: { color: c.foreground, fontSize: 13, fontWeight: '600' },
   cancelBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     backgroundColor: c.destructive + '15', borderRadius: 12, paddingVertical: 12,
     borderWidth: 1, borderColor: c.destructive,
   },
   cancelBtnTxt: { color: c.destructive, fontSize: 14, fontWeight: '600' },
-  bookTitle: { fontSize: 18, fontWeight: '800', color: c.foreground, textAlign: 'right' },
+  bookTitle:    { fontSize: 17, fontWeight: '800', color: c.foreground, textAlign: 'right' },
   locationRow: {
     flexDirection: 'row-reverse', alignItems: 'center',
-    backgroundColor: c.background, borderRadius: 12, padding: 14,
+    backgroundColor: c.background, borderRadius: 12, padding: 12,
     gap: 10, borderWidth: 1, borderColor: c.border,
   },
   locationTxt: { flex: 1, fontSize: 14, color: c.foreground, textAlign: 'right' },
   discountInput: {
     backgroundColor: c.background, borderWidth: 1, borderColor: c.border,
-    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10,
     color: c.foreground, fontSize: 14, textAlign: 'right',
   },
   fareCard: {
-    backgroundColor: c.background, borderRadius: 14, padding: 14,
+    backgroundColor: c.background, borderRadius: 12, padding: 12,
     borderWidth: 1, borderColor: c.border, gap: 6,
   },
-  fareRow: { flexDirection: 'row-reverse', justifyContent: 'space-between' },
-  fareTotalRow: {
-    borderTopWidth: 1, borderTopColor: c.border, paddingTop: 8, marginTop: 4,
-  },
-  fareLabel: { fontSize: 13, color: c.mutedForeground },
-  fareVal: { fontSize: 14, fontWeight: '600', color: c.foreground },
-  actionRow: { flexDirection: 'row-reverse', gap: 10 },
+  fareRow:     { flexDirection: 'row-reverse', justifyContent: 'space-between' },
+  fareTotalRow:{ borderTopWidth: 1, borderTopColor: c.border, paddingTop: 8, marginTop: 4 },
+  fareLabel:   { fontSize: 13, color: c.mutedForeground },
+  fareVal:     { fontSize: 13, fontWeight: '600', color: c.foreground },
+  actionRow:   { flexDirection: 'row-reverse', gap: 10 },
   estimateBtn: {
     flex: 1, backgroundColor: c.background, borderWidth: 1.5,
-    borderColor: c.primary, borderRadius: 14, paddingVertical: 14, alignItems: 'center',
+    borderColor: c.primary, borderRadius: 14, paddingVertical: 13, alignItems: 'center',
   },
   estimateTxt: { color: c.primary, fontSize: 14, fontWeight: '600' },
   requestBtn: {
     flex: 2, backgroundColor: c.primary, borderRadius: 14,
-    paddingVertical: 14, alignItems: 'center',
-    shadowColor: c.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
-    elevation: 6,
+    paddingVertical: 13, alignItems: 'center',
+    elevation: 4,
   },
   requestTxt: { color: c.primaryForeground, fontSize: 15, fontWeight: '800' },
   // ─── مودال ───
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: c.card, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 24, maxHeight: '75%',
+    padding: 20, maxHeight: '75%',
   },
-  modalHandle: { width: 40, height: 4, backgroundColor: c.border, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 18, fontWeight: '800', color: c.foreground, textAlign: 'right', marginBottom: 16 },
-  areaItem: {
+  modalHandle: { width: 40, height: 4, backgroundColor: c.border, borderRadius: 2, alignSelf: 'center', marginBottom: 14 },
+  modalTitle:  { fontSize: 17, fontWeight: '800', color: c.foreground, textAlign: 'right', marginBottom: 14 },
+  areaItem:    {
     flexDirection: 'row-reverse', alignItems: 'center', gap: 10,
-    paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: c.border,
+    paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: c.border,
   },
-  areaName: { flex: 1, fontSize: 15, fontWeight: '500', color: c.foreground, textAlign: 'right' },
+  areaName:    { flex: 1, fontSize: 14, fontWeight: '500', color: c.foreground, textAlign: 'right' },
   cancelBtnFull: {
     backgroundColor: c.destructive, borderRadius: 14, paddingVertical: 14,
     alignItems: 'center', marginBottom: 10,
   },
   cancelBtnFullTxt: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  backLink: { alignItems: 'center', paddingVertical: 8 },
+  backLink:    { alignItems: 'center', paddingVertical: 8 },
   backLinkTxt: { color: c.mutedForeground, fontSize: 14 },
-  ratingSubtitle: { color: c.mutedForeground, textAlign: 'center', fontSize: 14, marginBottom: 20 },
-  starsRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 24 },
+  ratingSubtitle: { color: c.mutedForeground, textAlign: 'center', fontSize: 14, marginBottom: 16 },
+  starsRow:    { flexDirection: 'row', justifyContent: 'center', marginBottom: 20 },
 });

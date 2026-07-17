@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "expo-notifications": "^57.0.5",
-    "react-native-maps": "1.18.0"
+    "react-native-maps": "1.18.0",
+    "react-native-webview": "^14.0.1"
   }
 }

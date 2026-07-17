@@ -57,6 +57,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-notifications": "^57.0.5"
+    "expo-notifications": "^57.0.5",
+    "react-native-webview": "^14.0.1"
   }
 }
