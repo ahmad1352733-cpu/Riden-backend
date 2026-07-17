@@ -68,8 +68,11 @@ export default function EarningsScreen() {
 
             {/* Balance Banner */}
             <View style={s.balanceBanner}>
-              <Text style={s.balanceLabelBig}>الرصيد الحالي</Text>
+              <Text style={s.balanceLabelBig}>رصيد الكفالة المتبقي</Text>
               <Text style={s.balanceValueBig}>{(earnings?.balance ?? 0).toFixed(2)} د.أ</Text>
+              <Text style={{ color: '#fff', opacity: 0.7, fontSize: 12, marginTop: 4 }}>
+                تُخصم منه عمولة الشركة بعد كل رحلة
+              </Text>
             </View>
 
             {/* Stats Grid */}

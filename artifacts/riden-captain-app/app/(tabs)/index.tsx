@@ -121,9 +121,10 @@ export default function DashboardScreen() {
         qc.invalidateQueries({ queryKey: ['getCaptainProfile'] });
         setShowCompleteModal(false);
         setDistanceKm(''); setDurationMin('');
-        const earned = (data as any)?.finalFare
-          ? `\nأرباحك: ${((data as any).finalFare * 0.9).toFixed(2)} د.أ`
-          : '';
+        const fare = (data as any)?.finalFare ?? 0;
+        const commRate = (data as any)?.commissionRate ?? 0.1;
+        const comm = Math.round(fare * commRate * 100) / 100;
+        const earned = fare > 0 ? `\nالأجرة النقدية: ${fare.toFixed(2)} د.أ\nالعمولة المخصومة: ${comm.toFixed(2)} د.أ` : '';
         Alert.alert('أحسنت! 🎉', `اكتملت الرحلة بنجاح.${earned}`);
       },
       onError: () => Alert.alert('خطأ', 'تعذّر إنهاء الرحلة'),

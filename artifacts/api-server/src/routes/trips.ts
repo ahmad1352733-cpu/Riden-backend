@@ -293,13 +293,15 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
     .where(eq(tripsTable.id, trip.id))
     .returning();
 
+  // الرصيد = رصيد كفالة الكابتن — تُخصم منه العمولة فقط
+  // الكابتن يستلم الأجرة نقداً من الراكب مباشرة
   await db.update(captainsTable).set({
-    balance: captainData.captain.balance + earning,
+    balance: captainData.captain.balance - commission,
     totalTrips: captainData.captain.totalTrips + 1,
   }).where(eq(captainsTable.id, captainData.captain.id));
 
   await db.insert(transactionsTable).values([
-    { captainId: captainData.captain.id, tripId: trip.id, amount: earning, type: "trip_earning", note: `رحلة رقم #${trip.id} - أرباح` },
+    { captainId: captainData.captain.id, tripId: trip.id, amount: earning, type: "trip_earning", note: `رحلة رقم #${trip.id} - أجرة نقدية` },
     { captainId: captainData.captain.id, tripId: trip.id, amount: -commission, type: "trip_commission", note: `عمولة ${Math.round(commissionRate * 100)}% على رحلة #${trip.id}` },
   ]);
 
