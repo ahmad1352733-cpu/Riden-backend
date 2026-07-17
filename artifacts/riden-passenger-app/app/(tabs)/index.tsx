@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
-  Platform, TextInput, Modal, FlatList, Linking, I18nManager,
+  Platform, TextInput, Modal, FlatList, Linking,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -19,8 +19,6 @@ import {
   useRateTrip,
   useUpdatePassengerLocation,
 } from '@workspace/api-client-react';
-
-I18nManager.forceRTL(true);
 
 // ─── مناطق عمّان ────────────────────────────────────────────────────────────
 const AREAS = [

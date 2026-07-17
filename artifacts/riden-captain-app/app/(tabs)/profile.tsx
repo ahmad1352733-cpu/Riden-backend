@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Platform, Alert, I18nManager,
+  ActivityIndicator, Platform, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -9,8 +9,6 @@ import { useGetCaptainProfile } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-
-I18nManager.forceRTL(true);
 
 const APPROVAL_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: 'قيد المراجعة', color: '#F59E0B' },

@@ -1,15 +1,13 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl,
-  Platform, I18nManager,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useGetCaptainEarnings, useGetCaptainTransactions } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@/context/AuthContext';
-
-I18nManager.forceRTL(true);
 
 const TYPE_LABELS: Record<string, string> = {
   trip_earning: 'أرباح رحلة',

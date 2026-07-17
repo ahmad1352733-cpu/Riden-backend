@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
-  TextInput, Platform, I18nManager, Modal, Linking,
+  TextInput, Platform, Modal, Linking,
 } from 'react-native';
 import MapView, { Marker, PROVIDER_DEFAULT, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
@@ -21,8 +21,6 @@ import {
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
-
-I18nManager.forceRTL(true);
 
 const AMMAN = { latitude: 31.9539, longitude: 35.9106 };
 

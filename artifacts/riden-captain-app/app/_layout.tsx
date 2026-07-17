@@ -1,5 +1,11 @@
 import React, { useEffect } from 'react';
+import { I18nManager } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// تفعيل RTL مرة واحدة فقط عند بدء التطبيق
+if (!I18nManager.isRTL) {
+  I18nManager.forceRTL(true);
+}
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

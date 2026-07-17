@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ActivityIndicator, Alert, ScrollView, Platform, I18nManager,
+  ActivityIndicator, Alert, ScrollView, Platform,
   Modal, FlatList, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,8 +14,6 @@ import {
   useGetAdminDiscountCodes, useCreateDiscountCode, useDeleteDiscountCode,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-
-I18nManager.forceRTL(true);
 
 type Section = 'pricing' | 'routes' | 'discounts';
 

@@ -1,15 +1,13 @@
 import React from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
-  RefreshControl, Platform, I18nManager, TouchableOpacity,
+  RefreshControl, Platform, TouchableOpacity,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useGetAdminDashboard } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
-
-I18nManager.forceRTL(true);
 
 const STATUS_AR: Record<string, string> = {
   pending: 'انتظار', accepted: 'مقبولة', started: 'جارية',

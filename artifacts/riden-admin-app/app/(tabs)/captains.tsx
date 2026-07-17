@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
-  Alert, Modal, TextInput, RefreshControl, Platform, I18nManager, ScrollView,
+  Alert, Modal, TextInput, RefreshControl, Platform, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -9,8 +9,6 @@ import { useGetAdminCaptains, useApproveCaptain, useCreditCaptain } from '@works
 import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-
-I18nManager.forceRTL(true);
 
 type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 

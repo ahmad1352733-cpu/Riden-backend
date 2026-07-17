@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, ActivityIndicator,
-  TouchableOpacity, RefreshControl, Platform, I18nManager, Linking,
+  TouchableOpacity, RefreshControl, Platform, Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useGetAdminTrips } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
-
-I18nManager.forceRTL(true);
 
 type StatusFilter = 'all' | 'pending' | 'accepted' | 'started' | 'completed' | 'cancelled';
 

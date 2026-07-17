@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   ActivityIndicator, Alert, Modal, TextInput, RefreshControl,
-  Platform, I18nManager,
+  Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -10,8 +10,6 @@ import { useGetAdminComplaints, useResolveComplaint } from '@workspace/api-clien
 import { useAuth } from '@/context/AuthContext';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
-
-I18nManager.forceRTL(true);
 
 const TYPE_AR: Record<string, string> = {
   driver_behavior: 'سلوك الكابتن',
