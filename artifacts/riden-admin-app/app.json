@@ -2,6 +2,7 @@
   "expo": {
     "name": "RIDEN Admin",
     "slug": "riden-admin-app",
+    "owner": "ahmad_jor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -39,6 +40,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bffbfd5b-ad2f-402e-b9f1-12cca428cd94"
+      }
     }
   }
 }

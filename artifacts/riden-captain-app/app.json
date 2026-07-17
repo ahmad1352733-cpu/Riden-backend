@@ -2,6 +2,7 @@
   "expo": {
     "name": "RIDEN - Captain",
     "slug": "riden-captain-app",
+    "owner": "ahmad_jor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -54,6 +55,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "f6dd92f2-ecc0-405b-be6f-cad0e6188537"
+      }
     }
   }
 }
