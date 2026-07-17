@@ -69,12 +69,13 @@ router.patch("/admin/captains/:id/approve", async (req, res) => {
   const id = parseInt(req.params.id);
   const { approved, reason } = req.body;
   if (typeof approved !== "boolean") { res.status(400).json({ error: "approved required" }); return; }
-  const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.id, id));
+  // id here is the user.id (returned by formatCaptain), so look up by userId
+  const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.userId, id));
   if (!captain) { res.status(404).json({ error: "Not found" }); return; }
   const [updated] = await db.update(captainsTable).set({
     isApproved: approved,
     approvalStatus: approved ? "approved" : "rejected",
-  }).where(eq(captainsTable.id, id)).returning();
+  }).where(eq(captainsTable.userId, id)).returning();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, updated.userId));
   res.json(formatCaptain(user, updated));
 });
@@ -83,9 +84,10 @@ router.post("/admin/captains/:id/credit", async (req, res) => {
   const id = parseInt(req.params.id);
   const { amount, note } = req.body;
   if (typeof amount !== "number" || amount <= 0) { res.status(400).json({ error: "amount must be > 0" }); return; }
-  const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.id, id));
+  // id here is the user.id (returned by formatCaptain), so look up by userId
+  const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.userId, id));
   if (!captain) { res.status(404).json({ error: "Not found" }); return; }
-  const [updated] = await db.update(captainsTable).set({ balance: captain.balance + amount }).where(eq(captainsTable.id, id)).returning();
+  const [updated] = await db.update(captainsTable).set({ balance: captain.balance + amount }).where(eq(captainsTable.userId, id)).returning();
   await db.insert(transactionsTable).values({
     captainId: id,
     amount,
