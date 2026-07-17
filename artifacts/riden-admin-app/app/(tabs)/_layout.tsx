@@ -17,6 +17,7 @@ function NativeTabLayout() {
       <NativeTabs.Trigger name="trips"><Icon sf={{ default: 'map', selected: 'map.fill' }} /><Label>الرحلات</Label></NativeTabs.Trigger>
       <NativeTabs.Trigger name="settings"><Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} /><Label>الإعدادات</Label></NativeTabs.Trigger>
       <NativeTabs.Trigger name="complaints"><Icon sf={{ default: 'exclamationmark.bubble', selected: 'exclamationmark.bubble.fill' }} /><Label>الشكاوى</Label></NativeTabs.Trigger>
+      <NativeTabs.Trigger name="notifications"><Icon sf={{ default: 'bell', selected: 'bell.fill' }} /><Label>إشعار</Label></NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -55,6 +56,7 @@ function ClassicTabLayout() {
         { name: 'trips', title: 'الرحلات', icon: 'map', sf: 'map.fill' },
         { name: 'settings', title: 'الإعدادات', icon: 'settings', sf: 'gearshape.fill' },
         { name: 'complaints', title: 'الشكاوى', icon: 'alert-circle', sf: 'exclamationmark.bubble.fill' },
+        { name: 'notifications', title: 'إشعار', icon: 'bell', sf: 'bell.fill' },
       ] as const).map(tab => (
         <Tabs.Screen
           key={tab.name}
