@@ -3,7 +3,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
   TextInput, Platform, Modal, Linking,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
@@ -199,16 +198,6 @@ export default function DashboardScreen() {
 
   const s = styles(colors);
 
-  // نقطة الوجهة على الخريطة
-  const destinationCoord = activeTrip
-    ? { latitude: activeTrip.dropoffLat, longitude: activeTrip.dropoffLng }
-    : pendingTrip
-      ? { latitude: (pendingTrip as any).pickupLat, longitude: (pendingTrip as any).pickupLng }
-      : null;
-
-  // مركز الخريطة
-  const mapCenter = captainLoc ?? AMMAN;
-
   if (profileLoading) {
     return (
       <View style={[s.center, { backgroundColor: colors.background }]}>
@@ -220,77 +209,6 @@ export default function DashboardScreen() {
 
   return (
     <View style={[s.flex, { backgroundColor: colors.background }]}>
-      {/* ─── الخريطة ─── */}
-      {Platform.OS !== 'web' ? (
-        <MapView
-          style={s.map}
-          provider={PROVIDER_DEFAULT}
-          region={{ ...mapCenter, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
-          showsUserLocation={false}
-        >
-          {/* موقع الكابتن */}
-          {captainLoc && (
-            <Marker coordinate={captainLoc} title="موقعك">
-              <View style={[s.markerWrap, { backgroundColor: colors.primary }]}>
-                <Feather name="navigation" size={18} color={colors.primaryForeground} />
-              </View>
-            </Marker>
-          )}
-
-          {/* موقع الراكب (أثناء الرحلة المقبولة أو الجارية) */}
-          {activeTrip && passengerCoord && (
-            <Marker coordinate={passengerCoord} title="موقع الراكب">
-              <View style={[s.markerWrap, { backgroundColor: '#F59E0B', width: 40, height: 40, borderRadius: 20 }]}>
-                <Feather name="user" size={18} color="#fff" />
-              </View>
-            </Marker>
-          )}
-
-          {/* الوجهة */}
-          {activeTrip && (
-            <Marker coordinate={{ latitude: activeTrip.dropoffLat, longitude: activeTrip.dropoffLng }} title="الوجهة">
-              <View style={[s.markerWrap, { backgroundColor: '#22C55E' }]}>
-                <Feather name="flag" size={16} color="#fff" />
-              </View>
-            </Marker>
-          )}
-
-          {/* موقع طلب الرحلة المعلّق */}
-          {!activeTrip && destinationCoord && (
-            <Marker coordinate={destinationCoord} title="موقع الراكب">
-              <View style={[s.markerWrap, { backgroundColor: '#F59E0B' }]}>
-                <Feather name="map-pin" size={16} color="#fff" />
-              </View>
-            </Marker>
-          )}
-
-          {/* خط من الكابتن للراكب */}
-          {captainLoc && passengerCoord && activeTrip?.status === 'accepted' && (
-            <Polyline
-              coordinates={[captainLoc, passengerCoord]}
-              strokeColor={colors.primary}
-              strokeWidth={3}
-              lineDashPattern={[8, 4]}
-            />
-          )}
-
-          {/* خط من الكابتن للوجهة أثناء الرحلة */}
-          {captainLoc && activeTrip?.status === 'started' && (
-            <Polyline
-              coordinates={[captainLoc, { latitude: activeTrip.dropoffLat, longitude: activeTrip.dropoffLng }]}
-              strokeColor="#22C55E"
-              strokeWidth={3}
-              lineDashPattern={[8, 4]}
-            />
-          )}
-        </MapView>
-      ) : (
-        <View style={[s.map, s.mapWeb]}>
-          <Feather name="map" size={48} color={colors.mutedForeground} />
-          <Text style={s.mapWebText}>الخريطة متاحة على تطبيق الهاتف</Text>
-        </View>
-      )}
-
       {/* ─── الشريط العلوي ─── */}
       <View style={[s.topBar, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 12) }]}>
         <View style={s.balanceBadge}>
@@ -314,7 +232,7 @@ export default function DashboardScreen() {
       </View>
 
       {/* ─── اللوح السفلي ─── */}
-      <View style={[s.panel, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 80) }]}>
+      <View style={[s.panel, { paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 80), flex: 1 }]}>
 
         {/* بانتظار الموافقة */}
         {!isApproved && (
@@ -514,20 +432,10 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   flex: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { color: colors.mutedForeground, fontSize: 15 },
-  map: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
-  mapWeb: { alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: colors.secondary },
-  mapWebText: { color: colors.mutedForeground, fontSize: 14 },
-  markerWrap: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4,
-    elevation: 6,
-  },
   topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingBottom: 12,
+    backgroundColor: '#0F1B2D',
   },
   balanceBadge: {
     backgroundColor: colors.card + 'EE', borderRadius: 16,
@@ -543,7 +451,7 @@ const styles = (colors: ReturnType<typeof useColors>) => StyleSheet.create({
   offlineBg: { backgroundColor: colors.secondary + 'EE', borderWidth: 1, borderColor: colors.border },
   dot: { width: 8, height: 8, borderRadius: 4 },
   onlineTxt: { fontSize: 14, fontWeight: '700', color: colors.foreground },
-  panel: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingTop: 16 },
+  panel: { paddingHorizontal: 16, paddingTop: 16 },
   infoCard: {
     backgroundColor: colors.card + 'F2', borderRadius: 20, padding: 24,
     alignItems: 'center', borderWidth: 1, borderColor: colors.border, gap: 8,

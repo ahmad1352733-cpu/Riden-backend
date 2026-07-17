@@ -3,7 +3,6 @@ import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
   Platform, TextInput, Modal, FlatList, Linking,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -54,8 +53,6 @@ export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const mapRef = useRef<MapView>(null);
-
   const [userLoc, setUserLoc] = useState({ lat: 31.9539, lng: 35.9106 });
   const [pickup, setPickup] = useState<typeof AREAS[0] | null>(null);
   const [dropoff, setDropoff] = useState<typeof AREAS[0] | null>(null);
@@ -203,70 +200,39 @@ export default function HomeScreen() {
   const s = styles(colors, insets);
 
   return (
-    <View style={s.root}>
-      {/* ─── الخريطة ─── */}
-      <MapView
-        ref={mapRef}
-        style={StyleSheet.absoluteFill}
-        provider={Platform.OS === 'android' ? PROVIDER_DEFAULT : undefined}
-        region={{
-          latitude: captainCoord?.latitude ?? userLoc.lat,
-          longitude: captainCoord?.longitude ?? userLoc.lng,
-          latitudeDelta: 0.04,
-          longitudeDelta: 0.04,
-        }}
-        showsUserLocation
-        showsMyLocationButton={false}
-      >
-        {/* نقطة الانطلاق قبل الرحلة */}
-        {pickup && !trip && (
-          <Marker coordinate={{ latitude: pickup.lat, longitude: pickup.lng }} title="الانطلاق">
-            <View style={[s.pin, { backgroundColor: '#F59E0B' }]}>
-              <Feather name="map-pin" size={14} color="#fff" />
+    <View style={[s.root, { backgroundColor: colors.background }]}>
+      {/* ─── الهيدر ─── */}
+      <View style={[s.header, { paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 16) }]}>
+        <Text style={s.greeting}>مرحباً، {user?.name?.split(' ')[0] ?? 'راكب'} 👋</Text>
+        {!trip && <Text style={s.subGreeting}>إلى أين تريد الذهاب؟</Text>}
+        {trip && statusInfo && (
+          <View style={[s.statusBadgeHeader, { backgroundColor: statusInfo.color + '25', borderColor: statusInfo.color }]}>
+            <Feather name={statusInfo.icon as any} size={13} color={statusInfo.color} />
+            <Text style={[s.statusHeaderTxt, { color: statusInfo.color }]}>{statusInfo.text}</Text>
+          </View>
+        )}
+        {/* مؤشر المسار */}
+        {(pickup || dropoff || trip) && (
+          <View style={s.routeIndicator}>
+            <View style={s.routeIndicatorRow}>
+              <View style={[s.routeDot, { backgroundColor: '#F59E0B' }]} />
+              <Text style={s.routeIndicatorTxt} numberOfLines={1}>
+                {trip ? trip.pickupAddress : pickup?.name ?? 'نقطة الانطلاق'}
+              </Text>
             </View>
-          </Marker>
+            {(dropoff || trip) && (
+              <>
+                <View style={s.routeIndicatorLine} />
+                <View style={s.routeIndicatorRow}>
+                  <View style={[s.routeDot, { backgroundColor: '#22C55E' }]} />
+                  <Text style={s.routeIndicatorTxt} numberOfLines={1}>
+                    {trip ? trip.dropoffAddress : dropoff?.name ?? 'الوجهة'}
+                  </Text>
+                </View>
+              </>
+            )}
+          </View>
         )}
-        {/* الوجهة قبل الرحلة */}
-        {dropoff && !trip && (
-          <Marker coordinate={{ latitude: dropoff.lat, longitude: dropoff.lng }} title="الوجهة">
-            <View style={[s.pin, { backgroundColor: '#22C55E' }]}>
-              <Feather name="flag" size={14} color="#fff" />
-            </View>
-          </Marker>
-        )}
-        {/* موقع الكابتن */}
-        {captainCoord && (
-          <>
-            <Marker coordinate={captainCoord} title="الكابتن">
-              <View style={s.captainMarker}>
-                <Feather name="truck" size={18} color="#fff" />
-              </View>
-            </Marker>
-            {/* خط من الكابتن للراكب */}
-            <Polyline
-              coordinates={[captainCoord, { latitude: userLoc.lat, longitude: userLoc.lng }]}
-              strokeColor="#F59E0B"
-              strokeWidth={3}
-              lineDashPattern={[8, 4]}
-            />
-          </>
-        )}
-        {/* الوجهة أثناء الرحلة */}
-        {trip && (
-          <Marker coordinate={{ latitude: trip.dropoffLat, longitude: trip.dropoffLng }} title="الوجهة">
-            <View style={[s.pin, { backgroundColor: '#22C55E', width: 34, height: 34, borderRadius: 17 }]}>
-              <Feather name="flag" size={15} color="#fff" />
-            </View>
-          </Marker>
-        )}
-      </MapView>
-
-      {/* ─── شريط الترحيب العلوي ─── */}
-      <View style={[s.topBar, { top: insets.top + (Platform.OS === 'web' ? 67 : 10) }]}>
-        <View style={s.greetCard}>
-          <Text style={s.greeting}>مرحباً، {user?.name?.split(' ')[0] ?? 'راكب'} 👋</Text>
-          {!trip && <Text style={s.subGreeting}>إلى أين تريد الذهاب؟</Text>}
-        </View>
       </View>
 
       {/* ─── اللوح السفلي ─── */}
@@ -524,32 +490,28 @@ export default function HomeScreen() {
 
 const styles = (c: ReturnType<typeof useColors>, insets: any) => StyleSheet.create({
   root: { flex: 1 },
-  topBar: { position: 'absolute', left: 16, right: 16, zIndex: 10 },
-  greetCard: {
-    backgroundColor: 'rgba(15,27,45,0.88)',
-    borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10,
-    alignSelf: 'flex-end',
+  header: {
+    backgroundColor: '#0F1B2D', paddingHorizontal: 20, paddingBottom: 20, gap: 10,
   },
-  greeting: { fontSize: 15, fontWeight: '700', color: '#fff', textAlign: 'right' },
-  subGreeting: { fontSize: 12, color: 'rgba(255,255,255,0.75)', textAlign: 'right', marginTop: 2 },
+  greeting: { fontSize: 16, fontWeight: '700', color: '#fff', textAlign: 'right' },
+  subGreeting: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'right' },
+  statusBadgeHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, borderWidth: 1, alignSelf: 'flex-end',
+  },
+  statusHeaderTxt: { fontSize: 13, fontWeight: '600' },
+  routeIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14,
+    padding: 12, gap: 6,
+  },
+  routeIndicatorRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 8 },
+  routeDot: { width: 10, height: 10, borderRadius: 5 },
+  routeIndicatorTxt: { flex: 1, fontSize: 13, color: '#fff', textAlign: 'right' },
+  routeIndicatorLine: { height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginRight: 9 },
   sheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: c.card, borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    padding: 20, borderWidth: 1, borderColor: c.border,
-  },
-  pin: {
-    width: 32, height: 32, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4,
-    elevation: 6,
-  },
-  captainMarker: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: '#fff',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 5,
-    elevation: 8,
+    flex: 1,
+    backgroundColor: c.card,
+    padding: 20, borderTopLeftRadius: 0, borderTopRightRadius: 0,
   },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
