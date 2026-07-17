@@ -229,6 +229,10 @@ export interface TrackingInfo {
   /** @nullable */
   captainLng: number | null;
   updatedAt: string;
+  /** @nullable */
+  passengerLat?: number | null;
+  /** @nullable */
+  passengerLng?: number | null;
 }
 
 export interface CaptainEarnings {

@@ -946,6 +946,23 @@ export const RateTripResponse = zod.object({
 
 
 /**
+ * @summary Passenger sends their live GPS location
+ */
+export const UpdatePassengerLocationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdatePassengerLocationBody = zod.object({
+  "lat": zod.number(),
+  "lng": zod.number()
+})
+
+export const UpdatePassengerLocationResponse = zod.object({
+  "success": zod.boolean()
+})
+
+
+/**
  * @summary Get captain's live location for an active trip
  */
 export const GetTripTrackingParams = zod.object({
@@ -956,7 +973,9 @@ export const GetTripTrackingResponse = zod.object({
   "tripId": zod.number(),
   "captainLat": zod.number().nullable(),
   "captainLng": zod.number().nullable(),
-  "updatedAt": zod.coerce.date()
+  "updatedAt": zod.coerce.date(),
+  "passengerLat": zod.number().nullish(),
+  "passengerLng": zod.number().nullish()
 })
 
 

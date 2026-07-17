@@ -341,6 +341,23 @@ router.post("/trips/:id/rate", requireAuth, async (req, res) => {
   res.json(updated);
 });
 
+// ─── PATCH /api/trips/:id/passenger-location ──────────────────────────────────
+router.patch("/trips/:id/passenger-location", requireAuth, async (req, res) => {
+  if (req.userRole !== "passenger") { res.status(403).json({ error: "Passengers only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const { lat, lng } = req.body;
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    res.status(400).json({ error: "lat and lng required" }); return;
+  }
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
+  if (!trip || trip.passengerId !== req.userId) { res.status(403).json({ error: "Forbidden" }); return; }
+  await db.update(tripsTable)
+    .set({ passengerLat: lat, passengerLng: lng, passengerLocationUpdatedAt: new Date() })
+    .where(eq(tripsTable.id, id));
+  res.json({ success: true });
+});
+
 // ─── GET /api/trips/:id/tracking ─────────────────────────────────────────────
 router.get("/trips/:id/tracking", requireAuth, async (req, res) => {
   const id = parseInt(req.params.id);
@@ -358,7 +375,12 @@ router.get("/trips/:id/tracking", requireAuth, async (req, res) => {
       updatedAt = captain.locationUpdatedAt ?? new Date();
     }
   }
-  res.json({ tripId: trip.id, captainLat, captainLng, updatedAt });
+  res.json({
+    tripId: trip.id,
+    captainLat, captainLng, updatedAt,
+    passengerLat: trip.passengerLat ?? null,
+    passengerLng: trip.passengerLng ?? null,
+  });
 });
 
 export default router;

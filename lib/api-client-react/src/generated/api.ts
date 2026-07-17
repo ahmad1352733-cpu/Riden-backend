@@ -1778,6 +1778,78 @@ export const useRateTrip = <TError = ErrorType<unknown>,
       return useMutation(getRateTripMutationOptions(options));
     }
 
+export const getUpdatePassengerLocationUrl = (id: number,) => {
+
+
+
+
+  return `/api/trips/${id}/passenger-location`
+}
+
+/**
+ * @summary Passenger sends their live GPS location
+ */
+export const updatePassengerLocation = async (id: number,
+    locationUpdate: LocationUpdate, options?: RequestInit): Promise<SuccessResponse> => {
+
+  return customFetch<SuccessResponse>(getUpdatePassengerLocationUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(locationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdatePassengerLocationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePassengerLocation>>, TError,{id: number;data: BodyType<LocationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePassengerLocation>>, TError,{id: number;data: BodyType<LocationUpdate>}, TContext> => {
+
+const mutationKey = ['updatePassengerLocation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePassengerLocation>>, {id: number;data: BodyType<LocationUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePassengerLocation(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePassengerLocationMutationResult = NonNullable<Awaited<ReturnType<typeof updatePassengerLocation>>>
+    export type UpdatePassengerLocationMutationBody = BodyType<LocationUpdate>
+    export type UpdatePassengerLocationMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Passenger sends their live GPS location
+ */
+export const useUpdatePassengerLocation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePassengerLocation>>, TError,{id: number;data: BodyType<LocationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePassengerLocation>>,
+        TError,
+        {id: number;data: BodyType<LocationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdatePassengerLocationMutationOptions(options));
+    }
+
 export const getGetTripTrackingUrl = (id: number,) => {
 
 
