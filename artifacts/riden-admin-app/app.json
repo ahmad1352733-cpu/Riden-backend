@@ -16,7 +16,13 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {},
+    "android": {
+      "package": "jo.riden.admin",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0A1628"
+      }
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

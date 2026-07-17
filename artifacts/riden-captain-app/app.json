@@ -21,6 +21,11 @@
       }
     },
     "android": {
+      "package": "jo.riden.captain",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0F1B2D"
+      },
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION"
