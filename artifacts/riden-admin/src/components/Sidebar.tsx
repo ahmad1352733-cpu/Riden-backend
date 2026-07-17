@@ -2,13 +2,14 @@ import { Link, useLocation } from "wouter";
 import { useGetMe } from "@workspace/api-client-react";
 
 const navItems = [
-  { icon: "📊", label: "Dashboard", path: "/" },
-  { icon: "🚗", label: "Captains", path: "/captains" },
-  { icon: "👥", label: "Passengers", path: "/passengers" },
-  { icon: "🗺️", label: "Trips", path: "/trips" },
-  { icon: "⚠️", label: "Complaints", path: "/complaints" },
-  { icon: "📍", label: "Routes", path: "/routes" },
-  { icon: "🎟️", label: "Discount Codes", path: "/discount-codes" },
+  { icon: "📊", label: "لوحة التحكم",   path: "/" },
+  { icon: "🚗", label: "الكباتن",        path: "/captains" },
+  { icon: "👥", label: "الركاب",         path: "/passengers" },
+  { icon: "🗺️", label: "الرحلات",       path: "/trips" },
+  { icon: "⚠️", label: "الشكاوى",       path: "/complaints" },
+  { icon: "🔔", label: "الإشعارات",      path: "/notifications" },
+  { icon: "📍", label: "المسارات",       path: "/routes" },
+  { icon: "🎟️", label: "أكواد الخصم",  path: "/discount-codes" },
 ];
 
 export function Sidebar() {

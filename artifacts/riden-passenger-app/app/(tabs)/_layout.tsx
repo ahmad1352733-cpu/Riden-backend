@@ -19,6 +19,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'car', selected: 'car.fill' }} />
         <Label>رحلاتي</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: 'bell', selected: 'bell.fill' }} />
+        <Label>الإشعارات</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: 'person', selected: 'person.fill' }} />
         <Label>حسابي</Label>
@@ -29,8 +33,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = true; // always dark
+  const isDark = true;
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
 
@@ -54,10 +57,7 @@ function ClassicTabLayout() {
           ) : (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ),
-        tabBarLabelStyle: {
-          fontFamily: 'Inter_500Medium',
-          fontSize: 11,
-        },
+        tabBarLabelStyle: { fontFamily: 'Inter_500Medium', fontSize: 10 },
       }}
     >
       <Tabs.Screen
@@ -65,11 +65,7 @@ function ClassicTabLayout() {
         options={{
           title: 'الرئيسية',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="map" tintColor={color} size={24} />
-            ) : (
-              <Feather name="map" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="map" tintColor={color} size={22} /> : <Feather name="map" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -77,11 +73,15 @@ function ClassicTabLayout() {
         options={{
           title: 'رحلاتي',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="car" tintColor={color} size={24} />
-            ) : (
-              <Feather name="navigation" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="car" tintColor={color} size={22} /> : <Feather name="navigation" size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'الإشعارات',
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="bell" tintColor={color} size={22} /> : <Feather name="bell" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -89,11 +89,7 @@ function ClassicTabLayout() {
         options={{
           title: 'حسابي',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person" tintColor={color} size={22} /> : <Feather name="user" size={20} color={color} />,
         }}
       />
     </Tabs>

@@ -15,9 +15,17 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'car', selected: 'car.fill' }} />
         <Label>لوحة التحكم</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="trips">
+        <Icon sf={{ default: 'list.bullet', selected: 'list.bullet.fill' }} />
+        <Label>رحلاتي</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="earnings">
         <Icon sf={{ default: 'banknote', selected: 'banknote.fill' }} />
         <Label>أرباحي</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="notifications">
+        <Icon sf={{ default: 'bell', selected: 'bell.fill' }} />
+        <Label>الإشعارات</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: 'person.circle', selected: 'person.circle.fill' }} />
@@ -50,14 +58,11 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={80}
-              tint={isDark ? 'dark' : 'default'}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={80} tint={isDark ? 'dark' : 'default'} style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ) : null,
+        tabBarLabelStyle: { fontSize: 10 },
       }}
     >
       <Tabs.Screen
@@ -65,11 +70,15 @@ function ClassicTabLayout() {
         options={{
           title: 'لوحة التحكم',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="car.fill" tintColor={color} size={24} />
-            ) : (
-              <Feather name="navigation" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="car.fill" tintColor={color} size={22} /> : <Feather name="navigation" size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="trips"
+        options={{
+          title: 'رحلاتي',
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="list.bullet" tintColor={color} size={22} /> : <Feather name="list" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -77,11 +86,15 @@ function ClassicTabLayout() {
         options={{
           title: 'أرباحي',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="banknote.fill" tintColor={color} size={24} />
-            ) : (
-              <Feather name="dollar-sign" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="banknote.fill" tintColor={color} size={22} /> : <Feather name="dollar-sign" size={20} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'الإشعارات',
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="bell.fill" tintColor={color} size={22} /> : <Feather name="bell" size={20} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -89,11 +102,7 @@ function ClassicTabLayout() {
         options={{
           title: 'حسابي',
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.circle.fill" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.circle.fill" tintColor={color} size={22} /> : <Feather name="user" size={20} color={color} />,
         }}
       />
     </Tabs>

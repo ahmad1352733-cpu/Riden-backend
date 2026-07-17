@@ -7,3 +7,4 @@ export * from "./routes";
 export * from "./transactions";
 export * from "./trip_requests";
 export * from "./settings";
+export * from "./notifications";

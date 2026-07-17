@@ -35,14 +35,14 @@ export default function RegisterScreen() {
         router.replace('/(tabs)');
       },
       onError: (err: any) => {
-        setError(err?.response?.data?.error || 'Registration failed');
+        setError(err?.response?.data?.error || 'فشل التسجيل، حاول مجدداً');
       },
     },
   });
 
   const handleSubmit = () => {
     if (!form.name.trim() || !form.phone.trim() || !form.email.trim() || !form.password) {
-      setError('All fields are required'); return;
+      setError('جميع الحقول مطلوبة'); return;
     }
     registerMutation.mutate({ data: form });
   };
@@ -55,18 +55,16 @@ export default function RegisterScreen() {
           contentContainerStyle={[s.scroll, { paddingTop: insets.top + (Platform.OS === 'web' ? 80 : 40), paddingBottom: insets.bottom + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Logo ── */}
           <View style={s.logoWrap}>
             <View style={s.circle}>
               <Text style={s.circleR}>R</Text>
             </View>
             <Text style={s.brand}>RIDEN</Text>
-            <Text style={s.tagline}>YOUR RIDE, YOUR WAY</Text>
+            <Text style={s.tagline}>رحلتك، بطريقتك</Text>
           </View>
 
-          {/* ── Card ── */}
           <View style={s.card}>
-            <Text style={s.cardTitle}>Create account</Text>
+            <Text style={s.cardTitle}>إنشاء حساب</Text>
 
             {!!error && (
               <View style={s.errorBox}>
@@ -75,11 +73,11 @@ export default function RegisterScreen() {
             )}
 
             {([
-              { field: 'name',     label: 'Full Name', placeholder: 'Ahmad Al-Rashid',  keyboard: 'default',       secure: false },
-              { field: 'phone',    label: 'Phone',     placeholder: '+962791234567',     keyboard: 'phone-pad',     secure: false },
-              { field: 'email',    label: 'Email',     placeholder: 'you@example.com',   keyboard: 'email-address', secure: false },
-              { field: 'password', label: 'Password',  placeholder: '••••••••',          keyboard: 'default',       secure: true  },
-            ] as any[]).map(({ field, label, placeholder, keyboard, secure }) => (
+              { field: 'name',     label: 'الاسم الكامل', placeholder: 'أحمد الرشيدي',    keyboard: 'default',       secure: false, cap: 'words'  },
+              { field: 'phone',    label: 'رقم الهاتف',    placeholder: '+962791234567',  keyboard: 'phone-pad',     secure: false, cap: 'none'   },
+              { field: 'email',    label: 'البريد الإلكتروني', placeholder: 'you@example.com', keyboard: 'email-address', secure: false, cap: 'none' },
+              { field: 'password', label: 'كلمة المرور',   placeholder: '••••••••',        keyboard: 'default',       secure: true,  cap: 'none'   },
+            ] as any[]).map(({ field, label, placeholder, keyboard, secure, cap }) => (
               <View key={field} style={s.fieldWrap}>
                 <Text style={s.label}>{label}</Text>
                 <TextInput
@@ -90,7 +88,8 @@ export default function RegisterScreen() {
                   placeholderTextColor={GRAY}
                   keyboardType={keyboard}
                   secureTextEntry={secure}
-                  autoCapitalize={field === 'name' ? 'words' : 'none'}
+                  autoCapitalize={cap}
+                  textAlign="right"
                 />
               </View>
             ))}
@@ -103,13 +102,13 @@ export default function RegisterScreen() {
             >
               {registerMutation.isPending
                 ? <ActivityIndicator color={BG} />
-                : <Text style={s.btnTxt}>Create Account</Text>}
+                : <Text style={s.btnTxt}>إنشاء حساب</Text>}
             </TouchableOpacity>
 
             <View style={s.footer}>
-              <Text style={s.footerTxt}>Already have an account? </Text>
+              <Text style={s.footerTxt}>لديك حساب؟ </Text>
               <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-                <Text style={s.footerLink}>Sign In</Text>
+                <Text style={s.footerLink}>سجّل دخولك</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -130,14 +129,14 @@ const s = StyleSheet.create({
   },
   circleR:   { fontSize: 28, fontWeight: '900', color: BG },
   brand:     { fontSize: 30, fontWeight: '900', color: WHITE, letterSpacing: 8, marginBottom: 4 },
-  tagline:   { fontSize: 11, color: ORANGE, letterSpacing: 3, fontWeight: '600' },
+  tagline:   { fontSize: 11, color: ORANGE, letterSpacing: 2, fontWeight: '600' },
   card:      { backgroundColor: CARD, borderRadius: 20, padding: 28, gap: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
-  cardTitle: { fontSize: 20, fontWeight: '700', color: WHITE, marginBottom: 4 },
+  cardTitle: { fontSize: 20, fontWeight: '700', color: WHITE, marginBottom: 4, textAlign: 'right' },
   errorBox:  { backgroundColor: RED + '25', borderWidth: 1, borderColor: RED + '60', borderRadius: 12, padding: 12 },
-  errorTxt:  { color: RED, fontSize: 13 },
+  errorTxt:  { color: RED, fontSize: 13, textAlign: 'right' },
   fieldWrap: { gap: 6 },
-  label:     { fontSize: 13, color: GRAY },
+  label:     { fontSize: 13, color: GRAY, textAlign: 'right' },
   input:     {
     backgroundColor: FIELD, borderWidth: 1, borderColor: BORDER,
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,

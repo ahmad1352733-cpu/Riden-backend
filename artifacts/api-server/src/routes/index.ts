@@ -5,6 +5,7 @@ import captainsRouter from "./captains";
 import tripsRouter from "./trips";
 import discountCodesRouter from "./discount-codes";
 import complaintsRouter from "./complaints";
+import notificationsRouter from "./notifications";
 import routesResourceRouter from "./routes-resource";
 import adminRouter from "./admin";
 
@@ -45,6 +46,7 @@ router.use(captainsRouter);
 router.use(tripsRouter);
 router.use(discountCodesRouter);
 router.use(complaintsRouter);
+router.use(notificationsRouter);
 router.use(routesResourceRouter);
 router.use(adminRouter);
 

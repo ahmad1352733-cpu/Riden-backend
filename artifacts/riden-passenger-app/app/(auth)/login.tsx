@@ -31,7 +31,7 @@ export default function LoginScreen() {
         router.replace('/(tabs)');
       },
       onError: (err: any) => {
-        setError(err?.response?.data?.error || 'Invalid credentials');
+        setError(err?.response?.data?.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
       },
     },
   });
@@ -44,18 +44,16 @@ export default function LoginScreen() {
           contentContainerStyle={[s.scroll, { paddingTop: insets.top + (Platform.OS === 'web' ? 80 : 60), paddingBottom: insets.bottom + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Logo ── */}
           <View style={s.logoWrap}>
             <View style={s.circle}>
               <Text style={s.circleR}>R</Text>
             </View>
             <Text style={s.brand}>RIDEN</Text>
-            <Text style={s.tagline}>YOUR RIDE, YOUR WAY</Text>
+            <Text style={s.tagline}>رحلتك، بطريقتك</Text>
           </View>
 
-          {/* ── Card ── */}
           <View style={s.card}>
-            <Text style={s.cardTitle}>Welcome back</Text>
+            <Text style={s.cardTitle}>أهلاً بعودتك</Text>
 
             {!!error && (
               <View style={s.errorBox}>
@@ -64,7 +62,7 @@ export default function LoginScreen() {
             )}
 
             <View style={s.fieldWrap}>
-              <Text style={s.label}>Email</Text>
+              <Text style={s.label}>البريد الإلكتروني</Text>
               <TextInput
                 style={s.input}
                 value={email}
@@ -73,11 +71,12 @@ export default function LoginScreen() {
                 placeholderTextColor={GRAY}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                textAlign="right"
               />
             </View>
 
             <View style={s.fieldWrap}>
-              <Text style={s.label}>Password</Text>
+              <Text style={s.label}>كلمة المرور</Text>
               <TextInput
                 style={s.input}
                 value={password}
@@ -85,13 +84,14 @@ export default function LoginScreen() {
                 placeholder="••••••••"
                 placeholderTextColor={GRAY}
                 secureTextEntry
+                textAlign="right"
               />
             </View>
 
             <TouchableOpacity
               style={[s.btn, loginMutation.isPending && { opacity: 0.6 }]}
               onPress={() => {
-                if (!email.trim() || !password) { setError('Enter email and password'); return; }
+                if (!email.trim() || !password) { setError('أدخل البريد الإلكتروني وكلمة المرور'); return; }
                 loginMutation.mutate({ data: { email: email.trim().toLowerCase(), password } });
               }}
               disabled={loginMutation.isPending}
@@ -99,13 +99,13 @@ export default function LoginScreen() {
             >
               {loginMutation.isPending
                 ? <ActivityIndicator color={BG} />
-                : <Text style={s.btnTxt}>Sign In</Text>}
+                : <Text style={s.btnTxt}>تسجيل الدخول</Text>}
             </TouchableOpacity>
 
             <View style={s.footer}>
-              <Text style={s.footerTxt}>Don't have an account? </Text>
+              <Text style={s.footerTxt}>ليس لديك حساب؟ </Text>
               <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text style={s.footerLink}>Register</Text>
+                <Text style={s.footerLink}>سجّل الآن</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -126,14 +126,14 @@ const s = StyleSheet.create({
   },
   circleR:   { fontSize: 38, fontWeight: '900', color: BG },
   brand:     { fontSize: 38, fontWeight: '900', color: WHITE, letterSpacing: 8, marginBottom: 4 },
-  tagline:   { fontSize: 12, color: ORANGE, letterSpacing: 3, fontWeight: '600' },
+  tagline:   { fontSize: 12, color: ORANGE, letterSpacing: 2, fontWeight: '600' },
   card:      { backgroundColor: CARD, borderRadius: 20, padding: 28, gap: 16,
     shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
-  cardTitle: { fontSize: 20, fontWeight: '700', color: WHITE, marginBottom: 4 },
+  cardTitle: { fontSize: 20, fontWeight: '700', color: WHITE, marginBottom: 4, textAlign: 'right' },
   errorBox:  { backgroundColor: RED + '25', borderWidth: 1, borderColor: RED + '60', borderRadius: 12, padding: 12 },
-  errorTxt:  { color: RED, fontSize: 13 },
+  errorTxt:  { color: RED, fontSize: 13, textAlign: 'right' },
   fieldWrap: { gap: 6 },
-  label:     { fontSize: 13, color: GRAY },
+  label:     { fontSize: 13, color: GRAY, textAlign: 'right' },
   input:     {
     backgroundColor: FIELD, borderWidth: 1, borderColor: BORDER,
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,

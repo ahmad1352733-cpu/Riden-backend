@@ -27,15 +27,14 @@ export default function CaptainLoginScreen() {
     mutation: {
       onSuccess: async (data) => {
         if (data.user.role !== 'captain') {
-          setError('This account is not a captain account');
+          setError('هذا الحساب ليس حساب كابتن');
           return;
         }
         await login(data.token, data.user as any);
-        // _layout.tsx will route to /pending or /(tabs) based on isApproved
         router.replace('/');
       },
       onError: (err: any) => {
-        setError(err?.response?.data?.error || 'Login failed');
+        setError(err?.response?.data?.error || 'البريد الإلكتروني أو كلمة المرور غير صحيحة');
       },
     },
   });
@@ -48,13 +47,11 @@ export default function CaptainLoginScreen() {
           contentContainerStyle={[s.scroll, { paddingTop: insets.top + (Platform.OS === 'web' ? 80 : 80), paddingBottom: insets.bottom + 40 }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Branding ── */}
           <View style={s.brandWrap}>
             <Text style={s.brand}>RIDEN</Text>
-            <Text style={s.sub}>Captain</Text>
+            <Text style={s.sub}>كابتن</Text>
           </View>
 
-          {/* ── Form ── */}
           <View style={s.form}>
             {!!error && (
               <View style={s.errorBox}>
@@ -63,7 +60,7 @@ export default function CaptainLoginScreen() {
             )}
 
             <View style={s.fieldWrap}>
-              <Text style={s.label}>Email</Text>
+              <Text style={s.label}>البريد الإلكتروني</Text>
               <TextInput
                 style={s.input}
                 value={email}
@@ -72,11 +69,12 @@ export default function CaptainLoginScreen() {
                 placeholderTextColor={GRAY}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                textAlign="right"
               />
             </View>
 
             <View style={s.fieldWrap}>
-              <Text style={s.label}>Password</Text>
+              <Text style={s.label}>كلمة المرور</Text>
               <TextInput
                 style={s.input}
                 value={password}
@@ -84,13 +82,14 @@ export default function CaptainLoginScreen() {
                 placeholder="••••••••"
                 placeholderTextColor={GRAY}
                 secureTextEntry
+                textAlign="right"
               />
             </View>
 
             <TouchableOpacity
               style={[s.btn, loginMutation.isPending && { opacity: 0.6 }]}
               onPress={() => {
-                if (!email.trim() || !password) { setError('Enter email and password'); return; }
+                if (!email.trim() || !password) { setError('أدخل البريد الإلكتروني وكلمة المرور'); return; }
                 loginMutation.mutate({ data: { email: email.trim().toLowerCase(), password } });
               }}
               disabled={loginMutation.isPending}
@@ -98,14 +97,14 @@ export default function CaptainLoginScreen() {
             >
               {loginMutation.isPending
                 ? <ActivityIndicator color={WHITE} />
-                : <Text style={s.btnTxt}>Sign In</Text>}
+                : <Text style={s.btnTxt}>تسجيل الدخول</Text>}
             </TouchableOpacity>
           </View>
 
           <View style={s.footer}>
-            <Text style={s.footerTxt}>New captain? </Text>
+            <Text style={s.footerTxt}>كابتن جديد؟ </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={s.footerLink}>Register here</Text>
+              <Text style={s.footerLink}>سجّل هنا</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -122,9 +121,9 @@ const s = StyleSheet.create({
   sub:      { fontSize: 18, fontWeight: '600', color: GREEN, letterSpacing: 6, textTransform: 'uppercase' },
   form:     { gap: 14 },
   errorBox: { backgroundColor: RED + '25', borderWidth: 1, borderColor: RED + '60', borderRadius: 12, padding: 12 },
-  errorTxt: { color: RED, fontSize: 13 },
+  errorTxt: { color: RED, fontSize: 13, textAlign: 'right' },
   fieldWrap:{ gap: 6 },
-  label:    { fontSize: 13, color: GRAY },
+  label:    { fontSize: 13, color: GRAY, textAlign: 'right' },
   input:    {
     backgroundColor: CARD, borderWidth: 1, borderColor: BORD,
     borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,

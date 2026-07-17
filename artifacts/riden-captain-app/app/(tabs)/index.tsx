@@ -328,6 +328,21 @@ export default function DashboardScreen() {
               </View>
             )}
 
+            {/* زر الاتجاهات */}
+            {activeTrip.pickupLat && activeTrip.pickupLng && (
+              <TouchableOpacity
+                style={[s.acceptBtn, { backgroundColor: '#1D4ED8', marginBottom: 8 }]}
+                onPress={() => {
+                  const lat = activeTrip.pickupLat;
+                  const lng = activeTrip.pickupLng;
+                  Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`);
+                }}
+              >
+                <Feather name="map-pin" size={18} color="#fff" />
+                <Text style={[s.acceptTxt, { color: '#fff' }]}>الحصول على الاتجاهات</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[s.acceptBtn, { backgroundColor: colors.warning as string }]}
               onPress={() => startMutation.mutate({ id: activeTrip.id })}

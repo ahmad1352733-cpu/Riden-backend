@@ -12,6 +12,7 @@ import TripsPage from "./pages/TripsPage";
 import ComplaintsPage from "./pages/ComplaintsPage";
 import RoutesPage from "./pages/RoutesPage";
 import DiscountCodesPage from "./pages/DiscountCodesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/complaints" component={() => <ProtectedRoute component={ComplaintsPage} />} />
       <Route path="/routes" component={() => <ProtectedRoute component={RoutesPage} />} />
       <Route path="/discount-codes" component={() => <ProtectedRoute component={DiscountCodesPage} />} />
+      <Route path="/notifications" component={() => <ProtectedRoute component={NotificationsPage} />} />
       <Route>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center">
