@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StatusBar,
+  ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView,
+  StatusBar, Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRegisterCaptain } from '@workspace/api-client-react';
 import { useAuth } from '@/context/AuthContext';
+import { Feather } from '@expo/vector-icons';
+import { TERMS_CONTENT } from '@/constants/terms';
 
 const BG    = '#0F1B2D';
 const CARD  = '#1A2D44';
@@ -33,7 +36,9 @@ export default function CaptainRegisterScreen() {
     licenseNumber: '', vehicleMake: '', vehicleModel: '',
     vehiclePlate: '', vehicleYear: '', vehicleColor: '',
   });
-  const [error, setError] = useState('');
+  const [error,         setError]         = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTerms,     setShowTerms]     = useState(false);
 
   const set = (field: keyof typeof form) => (v: string) => {
     setForm(p => ({ ...p, [field]: v }));
@@ -56,6 +61,9 @@ export default function CaptainRegisterScreen() {
     const required = ['name','phone','email','password','licenseNumber','vehicleMake','vehicleModel','vehiclePlate','vehicleYear','vehicleColor'];
     if (required.some(k => !(form as any)[k]?.trim())) {
       setError('جميع الحقول مطلوبة'); return;
+    }
+    if (!termsAccepted) {
+      setError('يجب الموافقة على الشروط والأحكام وسياسة الخصوصية'); return;
     }
     registerMutation.mutate({ data: { ...form, vehicleYear: parseInt(form.vehicleYear, 10) } });
   };
@@ -107,15 +115,35 @@ export default function CaptainRegisterScreen() {
             </View>
           </View>
 
+          {/* ── الشروط والأحكام ── */}
           <TouchableOpacity
-            style={[s.btn, registerMutation.isPending && { opacity: 0.6 }]}
+            style={s.termsRow}
+            onPress={() => setTermsAccepted(v => !v)}
+            activeOpacity={0.8}
+          >
+            <View style={[s.checkbox, termsAccepted && s.checkboxChecked]}>
+              {termsAccepted && <Feather name="check" size={13} color={BG} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.termsTxt}>
+                أوافق على{' '}
+                <Text style={s.termsLink} onPress={(e) => { e.stopPropagation?.(); setShowTerms(true); }}>
+                  الشروط والأحكام وسياسة الخصوصية
+                </Text>
+              </Text>
+              <Text style={s.termsSub}>يجب القراءة والموافقة قبل التسجيل</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.btn, (registerMutation.isPending || !termsAccepted) && { opacity: 0.5 }]}
             onPress={handleSubmit}
-            disabled={registerMutation.isPending}
+            disabled={registerMutation.isPending || !termsAccepted}
             activeOpacity={0.85}
           >
             {registerMutation.isPending
               ? <ActivityIndicator color={WHITE} />
-              : <Text style={s.btnTxt}>تسجيل كابتن</Text>}
+              : <Text style={s.btnTxt}>أوافق وأسجّل</Text>}
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 16 }}>
@@ -126,6 +154,30 @@ export default function CaptainRegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── مودال الشروط والأحكام ── */}
+      <Modal visible={showTerms} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalBox, { paddingBottom: insets.bottom + 16 }]}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>الشروط والأحكام وسياسة الخصوصية</Text>
+              <TouchableOpacity onPress={() => setShowTerms(false)} style={s.closeBtn}>
+                <Feather name="x" size={20} color={WHITE} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={s.termsScroll} showsVerticalScrollIndicator={false}>
+              <Text style={s.termsContent}>{TERMS_CONTENT}</Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={s.acceptBtn}
+              onPress={() => { setTermsAccepted(true); setShowTerms(false); }}
+            >
+              <Feather name="check-circle" size={18} color={BG} />
+              <Text style={s.acceptBtnTxt}>قرأت وأوافق على الشروط</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -139,10 +191,45 @@ const s = StyleSheet.create({
   errorTxt:     { color: RED, fontSize: 13, textAlign: 'right' },
   section:      { backgroundColor: 'rgba(26,45,68,0.6)', borderRadius: 20, padding: 16, marginBottom: 14 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: WHITE, marginBottom: 12, textAlign: 'right' },
-  btn:          {
+
+  // ── الشروط ──
+  termsRow: {
+    flexDirection: 'row-reverse', alignItems: 'flex-start', gap: 12,
+    backgroundColor: 'rgba(34,197,94,0.08)', borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.25)', borderRadius: 14,
+    padding: 14, marginBottom: 16,
+  },
+  checkbox: {
+    width: 22, height: 22, borderRadius: 6, borderWidth: 2,
+    borderColor: GRAY, alignItems: 'center', justifyContent: 'center',
+    marginTop: 1, flexShrink: 0,
+  },
+  checkboxChecked: { backgroundColor: GREEN, borderColor: GREEN },
+  termsTxt:  { fontSize: 13, color: WHITE, textAlign: 'right', lineHeight: 20 },
+  termsLink: { color: GREEN, fontWeight: '700', textDecorationLine: 'underline' },
+  termsSub:  { fontSize: 11, color: GRAY, textAlign: 'right', marginTop: 2 },
+
+  btn: {
     backgroundColor: GREEN, borderRadius: 12, paddingVertical: 16,
     alignItems: 'center', marginBottom: 4,
     shadowColor: GREEN, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6,
   },
-  btnTxt:       { fontSize: 16, fontWeight: '700', color: WHITE },
+  btnTxt: { fontSize: 16, fontWeight: '700', color: WHITE },
+
+  // ── مودال الشروط ──
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'flex-end' },
+  modalBox: {
+    backgroundColor: CARD, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 20, maxHeight: '90%',
+  },
+  modalHeader: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle:  { fontSize: 16, fontWeight: '700', color: WHITE, flex: 1, textAlign: 'right' },
+  closeBtn:    { padding: 4 },
+  termsScroll: { maxHeight: 440 },
+  termsContent:{ fontSize: 13, color: '#CBD5E1', lineHeight: 22, textAlign: 'right' },
+  acceptBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: GREEN, borderRadius: 14, paddingVertical: 14, marginTop: 16,
+  },
+  acceptBtnTxt: { fontSize: 15, fontWeight: '700', color: BG },
 });
