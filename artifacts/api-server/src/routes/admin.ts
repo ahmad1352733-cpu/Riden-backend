@@ -89,7 +89,7 @@ router.post("/admin/captains/:id/credit", async (req, res) => {
   if (!captain) { res.status(404).json({ error: "Not found" }); return; }
   const [updated] = await db.update(captainsTable).set({ balance: captain.balance + amount }).where(eq(captainsTable.userId, id)).returning();
   await db.insert(transactionsTable).values({
-    captainId: id,
+    captainId: captain.id,
     amount,
     type: "admin_credit",
     note: note ?? `إضافة رصيد من الإدارة - ${amount} د.أ`,
