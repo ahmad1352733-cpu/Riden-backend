@@ -1,4 +1,5 @@
 import { pgTable, serial, text, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
+// pushToken: رمز Expo Push يُحفظ عند تسجيل الجهاز
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "captain", "passenger"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "suspended"]);
@@ -12,6 +13,7 @@ export const usersTable = pgTable("users", {
   role: userRoleEnum("role").notNull().default("passenger"),
   status: userStatusEnum("status").notNull().default("active"),
   termsAcceptedAt: timestamp("terms_accepted_at"),
+  pushToken: text("push_token"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

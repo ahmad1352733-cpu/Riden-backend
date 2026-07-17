@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { notificationsTable, usersTable } from "@workspace/db/schema";
 import { eq, desc, or, isNull } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { sendPush } from "../lib/push";
 
 const router = Router();
 
@@ -63,10 +64,31 @@ router.post("/admin/notifications", requireAuth, async (req, res) => {
   if (target === "user" && userId) {
     // إشعار لمستخدم محدد
     const [row] = await db.insert(notificationsTable).values({ title, body, target: "user", userId }).returning();
+
+    // Push للمستخدم المحدد
+    const [u] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, userId));
+    if (u?.pushToken) await sendPush([u.pushToken], title, body, { screen: "notifications" });
+
     res.status(201).json(row);
   } else {
     // بث جماعي
     const [row] = await db.insert(notificationsTable).values({ title, body, target }).returning();
+
+    // Push للمستخدمين المستهدفين
+    let roleFilter: string[] = [];
+    if (target === "all")        roleFilter = ["captain", "passenger"];
+    if (target === "captains")   roleFilter = ["captain"];
+    if (target === "passengers") roleFilter = ["passenger"];
+
+    if (roleFilter.length > 0) {
+      const users = await db
+        .select({ pushToken: usersTable.pushToken })
+        .from(usersTable)
+        .where(or(...roleFilter.map(r => eq(usersTable.role, r as any))));
+      const tokens = users.map(u => u.pushToken).filter(Boolean) as string[];
+      if (tokens.length > 0) await sendPush(tokens, title, body, { screen: "notifications" });
+    }
+
     res.status(201).json(row);
   }
 });

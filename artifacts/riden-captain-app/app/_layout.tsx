@@ -21,6 +21,7 @@ import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
@@ -35,6 +36,9 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
 
+  // تسجيل Push Notifications عند تسجيل الدخول
+  usePushNotifications(token);
+
   useEffect(() => {
     if (isLoading) return;
 
@@ -43,13 +47,10 @@ function RootLayoutNav() {
     const inTabs    = segments[0] === '(tabs)';
 
     if (!token) {
-      // Not logged in → auth
       if (!inAuth) router.replace('/(auth)/login');
     } else if (token && user?.isApproved === false) {
-      // Logged in but not approved → pending screen
       if (!inPending) router.replace('/pending');
     } else if (token && user?.isApproved !== false) {
-      // Logged in and approved (or isApproved is undefined/true) → tabs
       if (!inTabs) router.replace('/(tabs)');
     }
   }, [token, user?.isApproved, isLoading, segments]);

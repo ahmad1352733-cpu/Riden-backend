@@ -10,6 +10,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and, or, desc, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { sendPush } from "../lib/push";
 import {
   calculateFare,
   getCaptainByUserId,
@@ -130,6 +131,24 @@ router.post("/trips", requireAuth, async (req, res) => {
     await db.insert(tripRequestsTable).values(
       nearest3.map(c => ({ tripId: trip.id, captainId: c.id }))
     );
+
+    // إرسال Push Notification للكباتن المختارين
+    const captainUserIds = nearest3.map(c => c.userId);
+    const captainUsers = await db
+      .select({ pushToken: usersTable.pushToken })
+      .from(usersTable)
+      .where(or(...captainUserIds.map(id => eq(usersTable.id, id))));
+
+    const tokens = captainUsers.map(u => u.pushToken).filter(Boolean) as string[];
+    if (tokens.length > 0) {
+      await sendPush(
+        tokens,
+        "🚗 طلب رحلة جديد!",
+        `من: ${pickupAddress ?? "موقع الانطلاق"} → ${dropoffAddress ?? "موقع الوصول"}`,
+        { screen: "trip-request", tripId: trip.id },
+        "high",
+      );
+    }
   }
 
   res.status(201).json(await buildTripResponse(trip));

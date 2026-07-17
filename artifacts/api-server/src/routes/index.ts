@@ -6,6 +6,7 @@ import tripsRouter from "./trips";
 import discountCodesRouter from "./discount-codes";
 import complaintsRouter from "./complaints";
 import notificationsRouter from "./notifications";
+import pushTokenRouter from "./push-token";
 import routesResourceRouter from "./routes-resource";
 import adminRouter from "./admin";
 
@@ -47,6 +48,7 @@ router.use(tripsRouter);
 router.use(discountCodesRouter);
 router.use(complaintsRouter);
 router.use(notificationsRouter);
+router.use(pushTokenRouter);
 router.use(routesResourceRouter);
 router.use(adminRouter);
 
