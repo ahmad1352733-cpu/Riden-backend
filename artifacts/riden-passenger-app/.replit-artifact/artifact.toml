@@ -1,0 +1,23 @@
+kind = "mobile"
+previewPath = "/passenger-app/"
+title = "RIDEN - Passenger"
+version = "1.0.0"
+id = "artifacts/riden-passenger-app"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/passenger-app/" ]
+localPort = 22407
+
+[services.development]
+run = "pnpm --filter @workspace/riden-passenger-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/riden-passenger-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/riden-passenger-app", "run", "serve" ]
+
+[services.env]
+PORT = "22407"
+BASE_PATH = "/passenger-app/"

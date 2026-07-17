@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "RIDEN - Captain",
+    "slug": "riden-captain-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "riden-captain-app",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F1B2D"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "يحتاج RIDEN إلى موقعك لتحديد مكانك وإرساله للركاب خلال العمل",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "يستخدم RIDEN موقعك لمشاركته مع الركاب خلال الرحلات"
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "يحتاج RIDEN إلى موقعك لمشاركته مع الركاب",
+          "locationAlwaysAndWhenInUsePermission": "يستخدم RIDEN موقعك خلال الرحلات"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

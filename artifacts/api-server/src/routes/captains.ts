@@ -1,53 +1,33 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { captainsTable, usersTable, tripsTable, transactionsTable } from "@workspace/db/schema";
-import { eq, desc, and, gte, sql } from "drizzle-orm";
 import {
-  UpdateCaptainAvailabilityBody,
-  UpdateCaptainLocationBody,
-} from "@workspace/api-zod";
+  captainsTable, usersTable, tripsTable, transactionsTable, tripRequestsTable,
+} from "@workspace/db/schema";
+import { eq, desc, and, gte } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { formatCaptain, getCaptainByUserId } from "../lib/helpers";
+import { formatCaptain, getCaptainByUserId, formatUser } from "../lib/helpers";
 
 const router = Router();
 
 // GET /api/captains/me
 router.get("/captains/me", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
+  if (!data) { res.status(404).json({ error: "Captain not found" }); return; }
   res.json(formatCaptain(data.user, data.captain));
 });
 
 // PUT /api/captains/me/availability
 router.put("/captains/me/availability", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  const parsed = UpdateCaptainAvailabilityBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
+  const { isOnline } = req.body;
+  if (typeof isOnline !== "boolean") { res.status(400).json({ error: "isOnline required" }); return; }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
-  if (!data.captain.isApproved) {
-    res.status(403).json({ error: "Captain not approved yet" });
-    return;
-  }
+  if (!data) { res.status(404).json({ error: "Captain not found" }); return; }
+  if (!data.captain.isApproved) { res.status(403).json({ error: "Captain not approved yet" }); return; }
   const [updated] = await db
     .update(captainsTable)
-    .set({ isOnline: parsed.data.isOnline })
+    .set({ isOnline })
     .where(eq(captainsTable.id, data.captain.id))
     .returning();
   res.json(formatCaptain(data.user, updated));
@@ -55,58 +35,43 @@ router.put("/captains/me/availability", requireAuth, async (req, res) => {
 
 // PUT /api/captains/me/location
 router.put("/captains/me/location", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
-  const parsed = UpdateCaptainLocationBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
-    return;
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
+  const { lat, lng } = req.body;
+  if (typeof lat !== "number" || typeof lng !== "number") {
+    res.status(400).json({ error: "lat and lng required" }); return;
   }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
-  await db
-    .update(captainsTable)
-    .set({ currentLat: parsed.data.lat, currentLng: parsed.data.lng, locationUpdatedAt: new Date() })
-    .where(eq(captainsTable.id, data.captain.id));
+  if (!data) { res.status(404).json({ error: "Not found" }); return; }
+  await db.update(captainsTable).set({
+    currentLat: lat, currentLng: lng, locationUpdatedAt: new Date(),
+  }).where(eq(captainsTable.id, data.captain.id));
   res.json({ success: true });
 });
 
 // GET /api/captains/me/trips
 router.get("/captains/me/trips", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
+  if (!data) { res.status(404).json({ error: "Not found" }); return; }
   const trips = await db
     .select()
     .from(tripsTable)
     .where(eq(tripsTable.captainId, data.captain.id))
     .orderBy(desc(tripsTable.createdAt))
     .limit(50);
-  res.json(trips);
+  // Enrich with passenger
+  const enriched = await Promise.all(trips.map(async t => {
+    const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, t.passengerId));
+    return { ...t, passenger: passenger ? formatUser(passenger) : null };
+  }));
+  res.json(enriched);
 });
 
 // GET /api/captains/me/earnings
 router.get("/captains/me/earnings", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
+  if (!data) { res.status(404).json({ error: "Not found" }); return; }
 
   const captainId = data.captain.id;
   const now = new Date();
@@ -137,46 +102,71 @@ router.get("/captains/me/earnings", requireAuth, async (req, res) => {
 });
 
 // GET /api/captains/me/pending-trip
+// Only returns trips where THIS captain was notified (trip_requests)
 router.get("/captains/me/pending-trip", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
   const data = await getCaptainByUserId(req.userId!);
   if (!data || !data.captain.isApproved || !data.captain.isOnline) {
-    res.json(null);
-    return;
+    res.json(null); return;
   }
 
-  // Get the oldest pending trip (not yet accepted)
-  const [trip] = await db
-    .select()
-    .from(tripsTable)
-    .where(eq(tripsTable.status, "pending"))
+  // Find pending trips assigned to this captain
+  const rows = await db
+    .select({ trip: tripsTable })
+    .from(tripRequestsTable)
+    .innerJoin(tripsTable, eq(tripRequestsTable.tripId, tripsTable.id))
+    .where(and(
+      eq(tripRequestsTable.captainId, data.captain.id),
+      eq(tripsTable.status, "pending"),
+    ))
     .orderBy(tripsTable.createdAt)
     .limit(1);
 
-  if (!trip) {
-    res.json(null);
-    return;
-  }
+  if (rows.length === 0) { res.json(null); return; }
 
-  // Include passenger info
+  const trip = rows[0].trip;
   const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, trip.passengerId));
-  res.json({ ...trip, passenger: passenger ? { id: passenger.id, name: passenger.name, phone: passenger.phone, email: passenger.email, role: passenger.role, status: passenger.status, createdAt: passenger.createdAt } : undefined });
+  res.json({ ...trip, passenger: passenger ? formatUser(passenger) : null });
+});
+
+// GET /api/captains/me/active-trip
+// Captain's currently accepted/started trip
+router.get("/captains/me/active-trip", requireAuth, async (req, res) => {
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
+  const data = await getCaptainByUserId(req.userId!);
+  if (!data) { res.json(null); return; }
+
+  const [trip] = await db
+    .select()
+    .from(tripsTable)
+    .where(and(
+      eq(tripsTable.captainId, data.captain.id),
+      // accepted or started
+      ...([] as any[]),
+    ))
+    .orderBy(desc(tripsTable.createdAt))
+    .limit(1);
+
+  // Manual filter since Drizzle OR with status needs workaround
+  const activeTrips = await db
+    .select()
+    .from(tripsTable)
+    .where(eq(tripsTable.captainId, data.captain.id))
+    .orderBy(desc(tripsTable.createdAt))
+    .limit(10);
+
+  const active = activeTrips.find(t => t.status === "accepted" || t.status === "started");
+  if (!active) { res.json(null); return; }
+
+  const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, active.passengerId));
+  res.json({ ...active, passenger: passenger ? formatUser(passenger) : null });
 });
 
 // GET /api/captains/me/transactions
 router.get("/captains/me/transactions", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Forbidden" });
-    return;
-  }
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Forbidden" }); return; }
   const data = await getCaptainByUserId(req.userId!);
-  if (!data) {
-    res.status(404).json({ error: "Captain not found" });
-    return;
-  }
+  if (!data) { res.status(404).json({ error: "Not found" }); return; }
   const txns = await db
     .select()
     .from(transactionsTable)

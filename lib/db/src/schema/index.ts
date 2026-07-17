@@ -5,3 +5,5 @@ export * from "./discount_codes";
 export * from "./complaints";
 export * from "./routes";
 export * from "./transactions";
+export * from "./trip_requests";
+export * from "./settings";

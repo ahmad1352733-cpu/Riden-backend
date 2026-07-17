@@ -1,0 +1,23 @@
+kind = "mobile"
+previewPath = "/admin-app/"
+title = "RIDEN - Admin App"
+version = "1.0.0"
+id = "artifacts/riden-admin-app"
+router = "expo-domain"
+
+[[services]]
+name = "expo"
+ensurePreviewReachable = "/status"
+paths = [ "/admin-app/" ]
+localPort = 19910
+
+[services.development]
+run = "pnpm --filter @workspace/riden-admin-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/riden-admin-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/riden-admin-app", "run", "serve" ]
+
+[services.env]
+PORT = "19910"
+BASE_PATH = "/admin-app/"

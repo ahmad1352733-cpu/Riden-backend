@@ -22,6 +22,7 @@ export const tripsTable = pgTable("trips", {
   finalFare: real("final_fare"),
   rating: real("rating"),
   discountCodeUsed: text("discount_code_used"),
+  cancellationReason: text("cancellation_reason"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),

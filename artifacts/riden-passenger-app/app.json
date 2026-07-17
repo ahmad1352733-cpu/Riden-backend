@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "RIDEN",
+    "slug": "riden-passenger-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "riden-passenger-app",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F1B2D"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "jo.riden.passenger"
+    },
+    "android": {
+      "package": "jo.riden.passenger",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0F1B2D"
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "يحتاج RIDEN إلى الوصول للموقع لتتبع رحلتك.",
+          "locationWhenInUsePermission": "يحتاج RIDEN إلى موقعك لإيجاد كابتن قريب منك."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

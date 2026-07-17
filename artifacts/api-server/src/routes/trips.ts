@@ -6,39 +6,47 @@ import {
   usersTable,
   discountCodesTable,
   transactionsTable,
+  tripRequestsTable,
 } from "@workspace/db/schema";
-import { eq, and, or, desc } from "drizzle-orm";
-import {
-  RequestTripBody,
-  EstimateFareBody,
-  CompleteTripBody,
-  CompleteTripParams,
-  RateTripBody,
-  RateTripParams,
-  GetTripParams,
-  CancelTripParams,
-  AcceptTripParams,
-  StartTripParams,
-  GetTripTrackingParams,
-} from "@workspace/api-zod";
+import { eq, and, or, desc, isNotNull } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { calculateFare, getCaptainByUserId } from "../lib/helpers";
+import {
+  calculateFare,
+  getCaptainByUserId,
+  getCaptainWithUser,
+  formatUser,
+  formatCaptain,
+  haversineKm,
+  getSettings,
+} from "../lib/helpers";
 
 const router = Router();
 
-function formatTrip(trip: typeof tripsTable.$inferSelect, passenger?: any, captain?: any) {
-  return { ...trip, passenger, captain };
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+async function buildTripResponse(trip: typeof tripsTable.$inferSelect) {
+  const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, trip.passengerId));
+  let captainData: any = null;
+  if (trip.captainId) {
+    const data = await getCaptainWithUser(trip.captainId);
+    if (data) captainData = formatCaptain(data.user, data.captain);
+  }
+  return {
+    ...trip,
+    passenger: passenger ? formatUser(passenger) : null,
+    captain: captainData,
+  };
 }
 
-// POST /api/trips/estimate
+// ─── POST /api/trips/estimate ──────────────────────────────────────────────────
 router.post("/trips/estimate", requireAuth, async (req, res) => {
-  const parsed = EstimateFareBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
+  const { distanceKm, durationMin, discountCode } = req.body;
+  if (typeof distanceKm !== "number" || typeof durationMin !== "number") {
+    res.status(400).json({ error: "distanceKm and durationMin required" });
     return;
   }
-  const { distanceKm, durationMin, discountCode } = parsed.data;
-  const totalFare = calculateFare(distanceKm, durationMin);
+  const settings = await getSettings();
+  const totalFare = calculateFare(distanceKm, durationMin, settings);
 
   let discountPercent = 0;
   if (discountCode) {
@@ -50,24 +58,24 @@ router.post("/trips/estimate", requireAuth, async (req, res) => {
 
   const discountAmount = Math.round((totalFare * discountPercent / 100) * 100) / 100;
   const finalFare = Math.round((totalFare - discountAmount) * 100) / 100;
-
-  // breakdown
-  const baseFare = 1.0;
-  const distanceFare = distanceKm > 2 ? Math.round((distanceKm - 2) * 0.25 * 100) / 100 : 0;
-  const timeFare = distanceKm > 2 ? Math.round(durationMin * 0.05 * 100) / 100 : 0;
+  const freeKm = settings.free_km ?? 2;
+  const baseFare = settings.base_fare ?? 1.0;
+  const distanceFare = distanceKm > freeKm ? Math.round((distanceKm - freeKm) * (settings.per_km_rate ?? 0.25) * 100) / 100 : 0;
+  const timeFare = distanceKm > freeKm ? Math.round(durationMin * (settings.per_min_rate ?? 0.05) * 100) / 100 : 0;
 
   res.json({ baseFare, distanceFare, timeFare, totalFare, discountAmount, finalFare, discountPercent: discountPercent || undefined });
 });
 
-// POST /api/trips
+// ─── POST /api/trips ───────────────────────────────────────────────────────────
 router.post("/trips", requireAuth, async (req, res) => {
   if (req.userRole !== "passenger") {
     res.status(403).json({ error: "Only passengers can request trips" });
     return;
   }
-  const parsed = RequestTripBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.flatten() });
+
+  const { pickupLat, pickupLng, pickupAddress, dropoffLat, dropoffLng, dropoffAddress, discountCode } = req.body;
+  if (!pickupLat || !pickupLng || !pickupAddress || !dropoffLat || !dropoffLng || !dropoffAddress) {
+    res.status(400).json({ error: "All location fields required" });
     return;
   }
 
@@ -85,30 +93,49 @@ router.post("/trips", requireAuth, async (req, res) => {
   }
 
   let discountPercent = 0;
-  const { discountCode, ...tripData } = parsed.data;
-
   if (discountCode) {
     const [dc] = await db.select().from(discountCodesTable).where(eq(discountCodesTable.code, discountCode));
     if (dc && dc.isActive && dc.currentUses < dc.maxUses && (!dc.expiresAt || dc.expiresAt > new Date())) {
       discountPercent = dc.discountPercent;
-      // increment usage
       await db.update(discountCodesTable).set({ currentUses: dc.currentUses + 1 }).where(eq(discountCodesTable.id, dc.id));
     }
   }
 
   const [trip] = await db.insert(tripsTable).values({
     passengerId: req.userId!,
-    ...tripData,
+    pickupLat, pickupLng, pickupAddress,
+    dropoffLat, dropoffLng, dropoffAddress,
     discountPercent: discountPercent || null,
-    discountCodeUsed: discountCode,
+    discountCodeUsed: discountCode ?? null,
     status: "pending",
   }).returning();
 
-  const [passenger] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-  res.status(201).json(formatTrip(trip, passenger ? { id: passenger.id, name: passenger.name, phone: passenger.phone, email: passenger.email, role: passenger.role, status: passenger.status, createdAt: passenger.createdAt } : undefined));
+  // Find 3 nearest online+approved captains and create trip_requests
+  const captains = await db
+    .select()
+    .from(captainsTable)
+    .where(and(
+      eq(captainsTable.isApproved, true),
+      eq(captainsTable.isOnline, true),
+      isNotNull(captainsTable.currentLat),
+      isNotNull(captainsTable.currentLng),
+    ));
+
+  const nearest3 = captains
+    .map(c => ({ ...c, dist: haversineKm(pickupLat, pickupLng, c.currentLat!, c.currentLng!) }))
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, 3);
+
+  if (nearest3.length > 0) {
+    await db.insert(tripRequestsTable).values(
+      nearest3.map(c => ({ tripId: trip.id, captainId: c.id }))
+    );
+  }
+
+  res.status(201).json(await buildTripResponse(trip));
 });
 
-// GET /api/trips/active
+// ─── GET /api/trips/active ────────────────────────────────────────────────────
 router.get("/trips/active", requireAuth, async (req, res) => {
   if (req.userRole !== "passenger") {
     res.status(403).json({ error: "Passengers only" });
@@ -125,10 +152,10 @@ router.get("/trips/active", requireAuth, async (req, res) => {
     res.json(null);
     return;
   }
-  res.json(trip);
+  res.json(await buildTripResponse(trip));
 });
 
-// GET /api/trips/my
+// ─── GET /api/trips/my ────────────────────────────────────────────────────────
 router.get("/trips/my", requireAuth, async (req, res) => {
   if (req.userRole !== "passenger") {
     res.status(403).json({ error: "Passengers only" });
@@ -140,69 +167,63 @@ router.get("/trips/my", requireAuth, async (req, res) => {
     .where(eq(tripsTable.passengerId, req.userId!))
     .orderBy(desc(tripsTable.createdAt))
     .limit(50);
-  res.json(trips);
+  const withData = await Promise.all(trips.map(buildTripResponse));
+  res.json(withData);
 });
 
-// GET /api/trips/:id
+// ─── GET /api/trips/:id ───────────────────────────────────────────────────────
 router.get("/trips/:id", requireAuth, async (req, res) => {
-  const parsed = GetTripParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid trip id" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, parsed.data.id));
-  if (!trip) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
-  res.json(trip);
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
+  if (!trip) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(await buildTripResponse(trip));
 });
 
-// POST /api/trips/:id/cancel
-router.post("/trips/:id/cancel", requireAuth, async (req, res) => {
-  const parsed = CancelTripParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid trip id" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, parsed.data.id));
-  if (!trip) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
-  if (trip.passengerId !== req.userId) {
-    res.status(403).json({ error: "Forbidden" });
-    return;
+// ─── PATCH /api/trips/:id/cancel ─────────────────────────────────────────────
+router.patch("/trips/:id/cancel", requireAuth, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
+  if (!trip) { res.status(404).json({ error: "Not found" }); return; }
+  if (trip.passengerId !== req.userId && req.userRole !== "admin") {
+    res.status(403).json({ error: "Forbidden" }); return;
   }
   if (trip.status === "completed" || trip.status === "cancelled") {
-    res.status(400).json({ error: "Cannot cancel this trip" });
-    return;
+    res.status(400).json({ error: "Cannot cancel this trip" }); return;
   }
-  const [updated] = await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id)).returning();
+  const reason = req.body?.reason ?? req.body?.cancellationReason ?? null;
+  const [updated] = await db
+    .update(tripsTable)
+    .set({ status: "cancelled", cancellationReason: reason })
+    .where(eq(tripsTable.id, trip.id))
+    .returning();
   res.json(updated);
 });
 
-// POST /api/trips/:id/accept
-router.post("/trips/:id/accept", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Captains only" });
-    return;
-  }
-  const parsed = AcceptTripParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid trip id" });
-    return;
-  }
+// ─── PATCH /api/trips/:id/accept ─────────────────────────────────────────────
+router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Captains only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
   const captainData = await getCaptainByUserId(req.userId!);
   if (!captainData || !captainData.captain.isApproved) {
-    res.status(403).json({ error: "Captain not approved" });
-    return;
+    res.status(403).json({ error: "Captain not approved" }); return;
   }
 
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, parsed.data.id));
+  // Verify this captain was notified about this trip
+  const [request] = await db
+    .select()
+    .from(tripRequestsTable)
+    .where(and(eq(tripRequestsTable.tripId, id), eq(tripRequestsTable.captainId, captainData.captain.id)));
+  if (!request) {
+    res.status(403).json({ error: "Trip not assigned to you" }); return;
+  }
+
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "pending") {
-    res.status(400).json({ error: "Trip not available" });
-    return;
+    res.status(400).json({ error: "Trip not available" }); return;
   }
 
   const [updated] = await db
@@ -210,131 +231,109 @@ router.post("/trips/:id/accept", requireAuth, async (req, res) => {
     .set({ status: "accepted", captainId: captainData.captain.id })
     .where(and(eq(tripsTable.id, trip.id), eq(tripsTable.status, "pending")))
     .returning();
-  res.json(updated);
+
+  res.json(await buildTripResponse(updated));
 });
 
-// POST /api/trips/:id/start
-router.post("/trips/:id/start", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Captains only" });
-    return;
-  }
-  const parsed = StartTripParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid trip id" });
-    return;
-  }
+// ─── PATCH /api/trips/:id/start ──────────────────────────────────────────────
+router.patch("/trips/:id/start", requireAuth, async (req, res) => {
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Captains only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
   const captainData = await getCaptainByUserId(req.userId!);
-  if (!captainData) {
-    res.status(403).json({ error: "Captain not found" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, parsed.data.id));
+  if (!captainData) { res.status(403).json({ error: "Not found" }); return; }
+
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "accepted" || trip.captainId !== captainData.captain.id) {
-    res.status(400).json({ error: "Cannot start this trip" });
-    return;
+    res.status(400).json({ error: "Cannot start this trip" }); return;
   }
+
   const [updated] = await db
     .update(tripsTable)
     .set({ status: "started", startedAt: new Date() })
     .where(eq(tripsTable.id, trip.id))
     .returning();
-  res.json(updated);
+
+  res.json(await buildTripResponse(updated));
 });
 
-// POST /api/trips/:id/complete
-router.post("/trips/:id/complete", requireAuth, async (req, res) => {
-  if (req.userRole !== "captain") {
-    res.status(403).json({ error: "Captains only" });
-    return;
-  }
-  const paramsParsed = CompleteTripParams.safeParse(req.params);
-  const bodyParsed = CompleteTripBody.safeParse(req.body);
-  if (!paramsParsed.success || !bodyParsed.success) {
-    res.status(400).json({ error: "Invalid data" });
-    return;
-  }
+// ─── PATCH /api/trips/:id/complete ───────────────────────────────────────────
+router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Captains only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
   const captainData = await getCaptainByUserId(req.userId!);
-  if (!captainData) {
-    res.status(403).json({ error: "Captain not found" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, paramsParsed.data.id));
+  if (!captainData) { res.status(403).json({ error: "Not found" }); return; }
+
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "started" || trip.captainId !== captainData.captain.id) {
-    res.status(400).json({ error: "Cannot complete this trip" });
-    return;
+    res.status(400).json({ error: "Cannot complete this trip" }); return;
   }
 
-  const { distanceKm, durationMin } = bodyParsed.data;
-  const fare = calculateFare(distanceKm, durationMin);
+  const { distanceKm, durationMin } = req.body;
+  if (typeof distanceKm !== "number" || typeof durationMin !== "number") {
+    res.status(400).json({ error: "distanceKm and durationMin required" }); return;
+  }
+
+  const settings = await getSettings();
+  const fare = calculateFare(distanceKm, durationMin, settings);
   const discountPercent = trip.discountPercent ?? 0;
   const discountAmount = fare * discountPercent / 100;
   const finalFare = Math.round((fare - discountAmount) * 100) / 100;
 
-  // 10% commission
-  const commission = Math.round(finalFare * 0.1 * 100) / 100;
+  const commissionRate = settings.commission_rate ?? 0.1;
+  const commission = Math.round(finalFare * commissionRate * 100) / 100;
   const earning = Math.round((finalFare - commission) * 100) / 100;
 
   const [updated] = await db
     .update(tripsTable)
-    .set({
-      status: "completed",
-      distanceKm,
-      durationMin,
-      fare,
-      finalFare,
-      completedAt: new Date(),
-    })
+    .set({ status: "completed", distanceKm, durationMin, fare, finalFare, completedAt: new Date() })
     .where(eq(tripsTable.id, trip.id))
     .returning();
 
-  // Update captain balance & totalTrips
   await db.update(captainsTable).set({
     balance: captainData.captain.balance + earning,
     totalTrips: captainData.captain.totalTrips + 1,
   }).where(eq(captainsTable.id, captainData.captain.id));
 
-  // Record transactions
   await db.insert(transactionsTable).values([
-    { captainId: captainData.captain.id, tripId: trip.id, amount: earning, type: "trip_earning", note: `Trip #${trip.id} earnings` },
-    { captainId: captainData.captain.id, tripId: trip.id, amount: -commission, type: "trip_commission", note: `10% commission on trip #${trip.id}` },
+    { captainId: captainData.captain.id, tripId: trip.id, amount: earning, type: "trip_earning", note: `رحلة رقم #${trip.id} - أرباح` },
+    { captainId: captainData.captain.id, tripId: trip.id, amount: -commission, type: "trip_commission", note: `عمولة ${Math.round(commissionRate * 100)}% على رحلة #${trip.id}` },
   ]);
 
-  res.json(updated);
+  res.json(await buildTripResponse(updated));
 });
 
-// POST /api/trips/:id/rate
+// ─── POST /api/trips/:id/rate ─────────────────────────────────────────────────
 router.post("/trips/:id/rate", requireAuth, async (req, res) => {
-  if (req.userRole !== "passenger") {
-    res.status(403).json({ error: "Passengers only" });
-    return;
+  if (req.userRole !== "passenger") { res.status(403).json({ error: "Passengers only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const { rating } = req.body;
+  if (typeof rating !== "number" || rating < 1 || rating > 5) {
+    res.status(400).json({ error: "Rating must be 1-5" }); return;
   }
-  const paramsParsed = RateTripParams.safeParse(req.params);
-  const bodyParsed = RateTripBody.safeParse(req.body);
-  if (!paramsParsed.success || !bodyParsed.success) {
-    res.status(400).json({ error: "Invalid data" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, paramsParsed.data.id));
+
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "completed" || trip.passengerId !== req.userId) {
-    res.status(400).json({ error: "Cannot rate this trip" });
-    return;
+    res.status(400).json({ error: "Cannot rate this trip" }); return;
   }
+
   const [updated] = await db
     .update(tripsTable)
-    .set({ rating: bodyParsed.data.rating })
+    .set({ rating })
     .where(eq(tripsTable.id, trip.id))
     .returning();
 
-  // Update captain rating
+  // Update captain running average rating
   if (trip.captainId) {
     const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.id, trip.captainId));
     if (captain) {
-      // Simple running average
-      const newTotalRatings = captain.totalTrips;
-      const newRating = newTotalRatings > 0
-        ? Math.round(((captain.rating * (newTotalRatings - 1) + bodyParsed.data.rating) / newTotalRatings) * 10) / 10
-        : bodyParsed.data.rating;
+      const n = captain.totalTrips || 1;
+      const newRating = Math.round(((captain.rating * (n - 1) + rating) / n) * 10) / 10;
       await db.update(captainsTable).set({ rating: newRating }).where(eq(captainsTable.id, captain.id));
     }
   }
@@ -342,20 +341,14 @@ router.post("/trips/:id/rate", requireAuth, async (req, res) => {
   res.json(updated);
 });
 
-// GET /api/trips/:id/tracking
+// ─── GET /api/trips/:id/tracking ─────────────────────────────────────────────
 router.get("/trips/:id/tracking", requireAuth, async (req, res) => {
-  const parsed = GetTripTrackingParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid trip id" });
-    return;
-  }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, parsed.data.id));
-  if (!trip) {
-    res.status(404).json({ error: "Trip not found" });
-    return;
-  }
-  let captainLat = null;
-  let captainLng = null;
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
+  if (!trip) { res.status(404).json({ error: "Not found" }); return; }
+
+  let captainLat = null, captainLng = null;
   let updatedAt = new Date();
   if (trip.captainId) {
     const [captain] = await db.select().from(captainsTable).where(eq(captainsTable.id, trip.captainId));
