@@ -1,13 +1,46 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import {
   captainsTable, usersTable, tripsTable, transactionsTable, tripRequestsTable,
 } from "@workspace/db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, signToken } from "../lib/auth";
 import { formatCaptain, getCaptainByUserId, formatUser } from "../lib/helpers";
+import { RegisterCaptainBody } from "@workspace/api-zod";
 
 const router = Router();
+
+// POST /api/captains/register  (alias used by the mobile app)
+router.post("/captains/register", async (req, res) => {
+  const parsed = RegisterCaptainBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.flatten() });
+    return;
+  }
+  const { name, phone, email, password, licenseNumber, vehicleMake, vehicleModel, vehiclePlate, vehicleYear, vehicleColor } = parsed.data;
+
+  const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (existing) {
+    res.status(409).json({ error: "Email already registered" });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [user] = await db.insert(usersTable).values({ name, phone, email, passwordHash, role: "captain" }).returning();
+  const [captain] = await db.insert(captainsTable).values({
+    userId: user.id,
+    licenseNumber,
+    vehicleMake,
+    vehicleModel,
+    vehiclePlate,
+    vehicleYear,
+    vehicleColor,
+  }).returning();
+
+  const token = signToken({ id: user.id, role: user.role });
+  res.status(201).json({ token, user: formatCaptain(user, captain) });
+});
 
 // GET /api/captains/me
 router.get("/captains/me", requireAuth, async (req, res) => {
