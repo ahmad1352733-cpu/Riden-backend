@@ -59,14 +59,15 @@ export default function DashboardScreen() {
 
   const { data: tracking } = useGetTripTracking(
     activeTrip?.id ?? 0,
-    { query: { enabled: !!activeTrip?.id, refetchInterval: 5000 } } as any,
+    { query: { enabled: !!activeTrip?.id, refetchInterval: 3000 } } as any,
   );
 
-  const trackingData  = tracking as any;
+  const trackingData   = tracking as any;
+  // موقع الراكب: حي من tracking أو ثابت من نقطة الانطلاق fallback
   const passengerCoord = trackingData?.passengerLat
-    ? { lat: trackingData.passengerLat, lng: trackingData.passengerLng }
-    : activeTrip
-      ? { lat: activeTrip.pickupLat, lng: activeTrip.pickupLng }
+    ? { lat: Number(trackingData.passengerLat), lng: Number(trackingData.passengerLng) }
+    : activeTrip?.pickupLat
+      ? { lat: Number(activeTrip.pickupLat), lng: Number(activeTrip.pickupLng) }
       : null;
 
   // ─── الطفرات ─────────────────────────────────────────────────────────────
@@ -184,28 +185,51 @@ export default function DashboardScreen() {
   const s = styles(colors);
 
   // ─── مؤشرات الخريطة ──────────────────────────────────────────────────────
-  const mapMarkers = [];
-  // موقع الكابتن — مركبة عند الإتاحة، نقطة عادية عند الإيقاف
+  const mapMarkers: any[] = [];
+
+  // الكابتن — مركبة متحركة عند الإتاحة
   mapMarkers.push({
+    id: 'captain',
     lat: captainLoc.lat, lng: captainLoc.lng,
-    color: isOnline ? '#22C55E' : '#6366F1',
-    label: isOnline ? '🚗 أنت' : 'أنت',
+    color: '#22C55E',
+    label: '🚗',
+    isVehicle: true,
     pulse: isOnline,
   });
-  // موقع الراكب عند الرحلة النشطة
-  if (activeTrip?.status === 'accepted' && activeTrip.pickupLat) {
-    mapMarkers.push({ lat: activeTrip.pickupLat, lng: activeTrip.pickupLng, color: '#F59E0B', label: 'الراكب', pulse: false });
-  }
-  if (activeTrip?.status === 'started' && activeTrip.dropoffLat) {
-    mapMarkers.push({ lat: activeTrip.dropoffLat, lng: activeTrip.dropoffLng, color: '#22C55E', label: 'الوجهة', pulse: false });
-  }
-  if (passengerCoord && activeTrip?.status === 'accepted') {
-    // تحديث مركز الخريطة بين الكابتن والراكب
+
+  if (activeTrip?.status === 'accepted') {
+    // موقع الراكب الحي (tracking) أو نقطة الانطلاق fallback
+    if (passengerCoord) {
+      mapMarkers.push({
+        id: 'passenger',
+        lat: passengerCoord.lat, lng: passengerCoord.lng,
+        color: '#F59E0B', label: '👤 الراكب', pulse: true,
+      });
+    }
+    // نقطة الانطلاق
+    if (activeTrip.pickupLat) {
+      mapMarkers.push({
+        id: 'pickup',
+        lat: activeTrip.pickupLat, lng: activeTrip.pickupLng,
+        color: '#F59E0B', label: '📍 الانطلاق',
+      });
+    }
   }
 
-  // مركز الخريطة
-  const mapCenter = activeTrip?.status === 'accepted' && activeTrip.pickupLat
-    ? { lat: (captainLoc.lat + activeTrip.pickupLat) / 2, lng: (captainLoc.lng + activeTrip.pickupLng) / 2 }
+  if (activeTrip?.status === 'started') {
+    // الراكب معك في السيارة — أظهر الوجهة فقط
+    if (activeTrip.dropoffLat) {
+      mapMarkers.push({
+        id: 'dropoff',
+        lat: activeTrip.dropoffLat, lng: activeTrip.dropoffLng,
+        color: '#22C55E', label: '🏁 الوجهة',
+      });
+    }
+  }
+
+  // مركز الخريطة — بين الكابتن والراكب عند الانتظار، بين الكابتن والوجهة عند السير
+  const mapCenter = activeTrip?.status === 'accepted' && passengerCoord
+    ? { lat: (captainLoc.lat + passengerCoord.lat) / 2, lng: (captainLoc.lng + passengerCoord.lng) / 2 }
     : activeTrip?.status === 'started' && activeTrip.dropoffLat
       ? { lat: (captainLoc.lat + activeTrip.dropoffLat) / 2, lng: (captainLoc.lng + activeTrip.dropoffLng) / 2 }
       : captainLoc;
