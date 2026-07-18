@@ -2,7 +2,7 @@
   "expo": {
     "name": "RIDEN Admin",
     "slug": "riden-admin-app",
-    "owner": "ahmad_jor",
+    "owner": "farah_hammad",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,7 +43,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "bffbfd5b-ad2f-402e-b9f1-12cca428cd94"
+        "projectId": "bc76ff3e-708a-408b-bf59-bf9afdb69f08"
       }
     }
   }

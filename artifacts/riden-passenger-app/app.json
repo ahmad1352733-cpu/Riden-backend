@@ -2,7 +2,7 @@
   "expo": {
     "name": "RIDEN",
     "slug": "riden-passenger-app",
-    "owner": "ahmad_jor",
+    "owner": "farah_hammad",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -55,7 +55,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "4fc3f927-86c0-4e67-8041-5bc8d9cbe727"
+        "projectId": "ddb45a5b-2f33-415c-9467-ff89c70c196a"
       }
     }
   }
