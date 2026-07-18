@@ -9,6 +9,15 @@
     "scheme": "riden-passenger-app",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/ddb45a5b-2f33-415c-9467-ff89c70c196a",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
@@ -47,7 +56,8 @@
           "locationAlwaysAndWhenInUsePermission": "يحتاج RIDEN إلى الوصول للموقع لتتبع رحلتك.",
           "locationWhenInUsePermission": "يحتاج RIDEN إلى موقعك لإيجاد كابتن قريب منك."
         }
-      ]
+      ],
+      "expo-updates"
     ],
     "experiments": {
       "typedRoutes": true,
