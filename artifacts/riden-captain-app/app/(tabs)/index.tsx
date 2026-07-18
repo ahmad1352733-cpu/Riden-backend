@@ -58,7 +58,7 @@ export default function DashboardScreen() {
   ) ?? null;
 
   const { data: tracking } = useGetTripTracking(
-    { id: activeTrip?.id ?? 0 },
+    activeTrip?.id ?? 0,
     { query: { enabled: !!activeTrip?.id, refetchInterval: 5000 } } as any,
   );
 
@@ -185,8 +185,13 @@ export default function DashboardScreen() {
 
   // ─── مؤشرات الخريطة ──────────────────────────────────────────────────────
   const mapMarkers = [];
-  // موقع الكابتن دائماً
-  mapMarkers.push({ lat: captainLoc.lat, lng: captainLoc.lng, color: '#6366F1', label: 'أنت', pulse: isOnline });
+  // موقع الكابتن — مركبة عند الإتاحة، نقطة عادية عند الإيقاف
+  mapMarkers.push({
+    lat: captainLoc.lat, lng: captainLoc.lng,
+    color: isOnline ? '#22C55E' : '#6366F1',
+    label: isOnline ? '🚗 أنت' : 'أنت',
+    pulse: isOnline,
+  });
   // موقع الراكب عند الرحلة النشطة
   if (activeTrip?.status === 'accepted' && activeTrip.pickupLat) {
     mapMarkers.push({ lat: activeTrip.pickupLat, lng: activeTrip.pickupLng, color: '#F59E0B', label: 'الراكب', pulse: false });
@@ -207,7 +212,8 @@ export default function DashboardScreen() {
 
   const mapZoom = activeTrip ? 13 : 15;
 
-  if (profileLoading) {
+  // نُظهر شاشة التحميل فقط في أول مرة (لا يوجد بيانات أبداً)
+  if (!captain && profileLoading) {
     return (
       <View style={[s.center, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.primary} size="large" />

@@ -78,7 +78,7 @@ async function registerForPush(authToken: string) {
 
     // جلب التوكن
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'f6dd92f2-ecc0-405b-be6f-cad0e6188537',
+      projectId: 'c31c7e21-67aa-4b65-a241-0ddb7e6b7bbc',
     });
 
     // إرسال التوكن للسيرفر

@@ -53,7 +53,7 @@ async function registerForPush(authToken: string) {
     if (finalStatus !== 'granted') return;
 
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: '4fc3f927-86c0-4e67-8041-5bc8d9cbe727',
+      projectId: 'ddb45a5b-2f33-415c-9467-ff89c70c196a',
     });
 
     await fetch(`${API}/users/push-token`, {

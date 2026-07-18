@@ -8,7 +8,7 @@ import {
   transactionsTable,
   tripRequestsTable,
 } from "@workspace/db/schema";
-import { eq, and, or, desc, isNotNull } from "drizzle-orm";
+import { eq, and, or, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sendPush } from "../lib/push";
 import {
@@ -118,12 +118,15 @@ router.post("/trips", requireAuth, async (req, res) => {
     .where(and(
       eq(captainsTable.isApproved, true),
       eq(captainsTable.isOnline, true),
-      isNotNull(captainsTable.currentLat),
-      isNotNull(captainsTable.currentLng),
     ));
 
   const nearest3 = captains
-    .map(c => ({ ...c, dist: haversineKm(pickupLat, pickupLng, c.currentLat!, c.currentLng!) }))
+    .map(c => ({
+      ...c,
+      dist: (c.currentLat && c.currentLng)
+        ? haversineKm(pickupLat, pickupLng, c.currentLat, c.currentLng)
+        : 9999, // كابتن بدون GPS يأتي في النهاية لكن يُشمل
+    }))
     .sort((a, b) => a.dist - b.dist)
     .slice(0, 3);
 
