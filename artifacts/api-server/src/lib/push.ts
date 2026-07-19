@@ -85,7 +85,6 @@ export async function sendPush(
                 notification_priority: "PRIORITY_MAX",
                 sound: "default",
                 default_vibrate_timings: true,
-                click_action: "OPEN_ACTIVITY_1",
               },
             },
           },

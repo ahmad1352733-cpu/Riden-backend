@@ -17,28 +17,36 @@ Notifications.setNotificationHandler({
 });
 
 function navigate(router: ReturnType<typeof useRouter>, data: any) {
-  if (data?.screen === 'trip-request') {
-    router.replace('/(tabs)');
-  } else if (data?.screen === 'notifications') {
-    router.replace('/(tabs)/notifications');
-  }
+  if (!data) return;
+  // نؤخر قليلاً لضمان جاهزية الـ router
+  setTimeout(() => {
+    if (data?.screen === 'trip-request') {
+      router.replace('/(tabs)');
+    } else if (data?.screen === 'notifications') {
+      router.replace('/(tabs)/notifications');
+    }
+  }, 500);
 }
 
 export function usePushNotifications(token: string | null) {
   const router = useRouter();
   const notificationListener = useRef<Notifications.EventSubscription>();
   const responseListener     = useRef<Notifications.EventSubscription>();
+  const handled = useRef(false);
 
   useEffect(() => {
     if (!token) return;
     registerForPush(token);
 
     // ─── حالة: التطبيق كان مغلقاً (killed) والمستخدم ضغط الإشعار ───
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (!response) return;
-      const data = response.notification.request.content.data as any;
-      navigate(router, data);
-    });
+    if (!handled.current) {
+      Notifications.getLastNotificationResponseAsync().then(response => {
+        if (!response) return;
+        handled.current = true;
+        const data = response.notification.request.content.data as any;
+        navigate(router, data);
+      });
+    }
 
     // ─── حالة: التطبيق مفتوح أو في الخلفية ───
     notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
