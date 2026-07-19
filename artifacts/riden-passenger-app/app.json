@@ -2,7 +2,7 @@
   "expo": {
     "name": "RIDEN",
     "slug": "riden-passenger-app",
-    "owner": "farah_hammad",
+    "owner": "farah_kh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,7 +13,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/ddb45a5b-2f33-415c-9467-ff89c70c196a",
+      "url": "https://u.expo.dev/e61ec069-a95a-4dca-b555-b0c68a3aca59",
       "enabled": true,
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
@@ -74,7 +74,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "ddb45a5b-2f33-415c-9467-ff89c70c196a"
+        "projectId": "e61ec069-a95a-4dca-b555-b0c68a3aca59"
       }
     }
   }
