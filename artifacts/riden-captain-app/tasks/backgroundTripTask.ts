@@ -5,6 +5,10 @@
  *
  * NOTE: This file must be imported at the app root BEFORE any navigator renders
  *       (done in app/_layout.tsx) so TaskManager registers the task definition.
+ *
+ * GRACEFUL DEGRADATION: If expo-task-manager native module is absent (old APK),
+ * the defineTask call is wrapped in try-catch so it silently no-ops instead of
+ * crashing the entire app. The start/stop helpers also no-op safely.
  */
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
@@ -15,44 +19,42 @@ export const BACKGROUND_LOCATION_TASK = 'RIDEN_BACKGROUND_LOCATION';
 let _lastPendingTripId: number | null = null;
 
 // ─── Register the task definition (must run at module load time) ─────────────
-TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
-  if (error) return;
+try {
+  TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
+    if (error) return;
 
-  // Grab API domain (baked in at build / OTA bundle time)
-  const domain = process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app';
-  const base   = `https://${domain}/api`;
+    const domain = process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app';
+    const base   = `https://${domain}/api`;
 
-  try {
-    // Read the stored token from AsyncStorage
-    const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-    const token = await AsyncStorage.getItem('riden_token');
-    if (!token) return;
+    try {
+      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
+      const token = await AsyncStorage.getItem('riden_token');
+      if (!token) return;
 
-    // Poll for pending trip
-    const res = await fetch(`${base}/captains/pending-trip`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return;
+      const res = await fetch(`${base}/captains/pending-trip`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
 
-    const trip = await res.json();
-    if (!trip?.id) { _lastPendingTripId = null; return; }
+      const trip = await res.json();
+      if (!trip?.id) { _lastPendingTripId = null; return; }
 
-    // Only notify once per new trip
-    if (trip.id === _lastPendingTripId) return;
-    _lastPendingTripId = trip.id;
+      if (trip.id === _lastPendingTripId) return;
+      _lastPendingTripId = trip.id;
 
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: '🚖 طلب رحلة جديد!',
-        body: `${trip.pickupAddress ?? 'موقع جديد'} ← ${trip.dropoffAddress ?? 'وجهة'}`,
-        data: { tripId: trip.id },
-        sound: true,
-        priority: Notifications.AndroidNotificationPriority.MAX,
-      },
-      trigger: null, // fire immediately
-    });
-  } catch { /* silent — background tasks must never throw */ }
-});
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🚖 طلب رحلة جديد!',
+          body: `${trip.pickupAddress ?? 'موقع جديد'} ← ${trip.dropoffAddress ?? 'وجهة'}`,
+          data: { tripId: trip.id },
+          sound: true,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        },
+        trigger: null,
+      });
+    } catch { /* silent — background tasks must never throw */ }
+  });
+} catch { /* expo-task-manager not in this native build — silently skip */ }
 
 // ─── Helpers called from UI ───────────────────────────────────────────────────
 
@@ -69,8 +71,8 @@ export async function startForegroundService(): Promise<void> {
 
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 15000,      // every 15 s
-      distanceInterval: 50,     // or every 50 m
+      timeInterval: 15000,
+      distanceInterval: 50,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'RIDEN — أنت متاح',
@@ -79,7 +81,7 @@ export async function startForegroundService(): Promise<void> {
       },
       pausesUpdatesAutomatically: false,
     });
-  } catch { /* ignore — graceful degradation */ }
+  } catch { /* ignore — graceful degradation if native module absent */ }
 }
 
 /** Stop the foreground-service location task (captain going offline). */
