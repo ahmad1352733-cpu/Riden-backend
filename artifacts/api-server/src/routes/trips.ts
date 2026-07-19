@@ -294,10 +294,19 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Cannot complete this trip" }); return;
   }
 
-  const { distanceKm } = req.body;
-  if (typeof distanceKm !== "number" || distanceKm < 0) {
+  const { distanceKm: clientDistanceKm } = req.body;
+  if (typeof clientDistanceKm !== "number" || clientDistanceKm < 0) {
     res.status(400).json({ error: "distanceKm required" }); return;
   }
+
+  // المسافة المستقيمة من الإحداثيات المخزنة كضمان للحد الأدنى
+  const straightLineKm = haversineKm(
+    Number(trip.pickupLat), Number(trip.pickupLng),
+    Number(trip.dropoffLat), Number(trip.dropoffLng),
+  );
+  // خذ الأكبر: مسافة GPS المتراكمة أو المسافة المستقيمة
+  const distanceKm = Math.max(clientDistanceKm, straightLineKm);
+
   // الوقت يُحسب من السيرفر — لا يمكن للكابتن التلاعب به
   const now = new Date();
   const durationMin = trip.startedAt
