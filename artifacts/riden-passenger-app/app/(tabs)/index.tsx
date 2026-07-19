@@ -198,6 +198,14 @@ export default function HomeScreen() {
   const statusInfo = STATUS_INFO[status] ?? null;
 
   useEffect(() => { if (status === 'started') startedTripIdRef.current = tripId; }, [status, tripId]);
+
+  // ─── حساب السعر تلقائي لما يتحدد الانطلاق والوجهة ───────────────────────
+  useEffect(() => {
+    if (!pickup || !dropoff || trip) return;
+    const dist = distKm(pickup.lat, pickup.lng, dropoff.lat, dropoff.lng);
+    const dur  = Math.ceil(dist * 2.5);
+    estimateMutation.mutate({ data: { distanceKm: dist, durationMin: dur, discountCode: discountCode || undefined } } as any);
+  }, [pickup, dropoff, discountCode]);
   useEffect(() => {
     const isActive = !!trip;
     if (prevActiveRef.current && !isActive && startedTripIdRef.current) {
