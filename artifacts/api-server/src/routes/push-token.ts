@@ -1,7 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -13,10 +11,15 @@ router.post("/users/push-token", requireAuth, async (req, res) => {
     res.status(400).json({ error: "token مطلوب" });
     return;
   }
-  console.log(`[push-token] saving token type=${type ?? "unknown"} for user=${req.userId}`);
-  const result = await db.update(usersTable).set({ pushToken: token }).where(eq(usersTable.id, req.userId!));
-  console.log(`[push-token] update result:`, JSON.stringify(result));
-  res.json({ ok: true, type, tokenPrefix: token.slice(0, 20) });
+  const userId = req.userId!;
+  console.log(`[push-token] saving token type=${type ?? "unknown"} for user=${userId} token=${token.slice(0, 30)}...`);
+  // raw SQL لتجنب أي مشكلة مع Drizzle mapping
+  const result = await pool.query(
+    "UPDATE users SET push_token = $1 WHERE id = $2 RETURNING id, push_token",
+    [token, userId]
+  );
+  console.log(`[push-token] rows updated=${result.rowCount}, returned=${JSON.stringify(result.rows)}`);
+  res.json({ ok: true, type, tokenPrefix: token.slice(0, 20), updated: result.rowCount });
 });
 
 export default router;
