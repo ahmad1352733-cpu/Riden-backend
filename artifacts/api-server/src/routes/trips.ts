@@ -294,10 +294,15 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Cannot complete this trip" }); return;
   }
 
-  const { distanceKm, durationMin } = req.body;
-  if (typeof distanceKm !== "number" || typeof durationMin !== "number") {
-    res.status(400).json({ error: "distanceKm and durationMin required" }); return;
+  const { distanceKm } = req.body;
+  if (typeof distanceKm !== "number" || distanceKm < 0) {
+    res.status(400).json({ error: "distanceKm required" }); return;
   }
+  // الوقت يُحسب من السيرفر — لا يمكن للكابتن التلاعب به
+  const now = new Date();
+  const durationMin = trip.startedAt
+    ? Math.max(1, Math.round((now.getTime() - new Date(trip.startedAt).getTime()) / 60000))
+    : 1;
 
   const settings = await getSettings();
   const fare = calculateFare(distanceKm, durationMin, settings);

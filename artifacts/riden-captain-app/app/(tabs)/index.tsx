@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
-  TextInput, Platform, Modal, Linking, ScrollView,
+  Platform, Linking, ScrollView,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { startForegroundService, stopForegroundService } from '@/tasks/backgroundTripTask';
@@ -42,9 +42,6 @@ export default function DashboardScreen() {
   const qc = useQueryClient();
 
   const [captainLoc, setCaptainLoc] = useState<{ lat: number; lng: number }>(AMMAN);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
-  const [distanceKm,  setDistanceKm]  = useState('');
-  const [durationMin, setDurationMin] = useState('');
   const locationSubRef    = useRef<Location.LocationSubscription | null>(null);
   const locationMutateRef = useRef<ReturnType<typeof useUpdateCaptainLocation>['mutate'] | null>(null);
 
@@ -119,8 +116,6 @@ export default function DashboardScreen() {
         qc.invalidateQueries({ queryKey: ['getCaptainTrips'] });
         qc.invalidateQueries({ queryKey: ['getCaptainEarnings'] });
         qc.invalidateQueries({ queryKey: ['getCaptainProfile'] });
-        setShowCompleteModal(false);
-        setDistanceKm(''); setDurationMin('');
         const fare     = (data as any)?.finalFare   ?? 0;
         const commRate = (data as any)?.commissionRate ?? 0.1;
         const comm     = Math.round(fare * commRate * 100) / 100;
@@ -221,13 +216,11 @@ export default function DashboardScreen() {
   };
 
   const handleComplete = () => {
-    const dist = parseFloat(distanceKm);
-    const dur  = parseFloat(durationMin);
-    if (isNaN(dist) || isNaN(dur) || dist <= 0 || dur <= 0) {
-      Alert.alert('خطأ', 'يرجى إدخال مسافة ومدة صحيحة'); return;
-    }
     if (!activeTrip) return;
-    completeMutation.mutate({ id: activeTrip.id, data: { distanceKm: dist, durationMin: dur } });
+    const dist = accDistanceRef.current > 0
+      ? Math.round(accDistanceRef.current * 100) / 100
+      : 0.1; // حد أدنى للرحلات القصيرة جداً
+    completeMutation.mutate({ id: activeTrip.id, data: { distanceKm: dist } });
   };
 
   const callPassenger = () => {
@@ -471,14 +464,18 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             )}
             <TouchableOpacity style={s.primaryBtn} onPress={() => {
-              // ملء تلقائي من GPS
               const dist = accDistanceRef.current;
               const elapsed = tripStartTimeRef.current
-                ? (Date.now() - tripStartTimeRef.current) / 60000
+                ? Math.round((Date.now() - tripStartTimeRef.current) / 60000)
                 : 0;
-              if (dist > 0)    setDistanceKm(dist.toFixed(2));
-              if (elapsed > 0) setDurationMin(Math.round(elapsed).toString());
-              setShowCompleteModal(true);
+              Alert.alert(
+                'إنهاء الرحلة',
+                `المسافة: ${dist > 0 ? dist.toFixed(2) : '—'} كم\nالوقت: ${elapsed} دقيقة\nالسعر يُحسب تلقائياً`,
+                [
+                  { text: 'إلغاء', style: 'cancel' },
+                  { text: 'تأكيد الإنهاء', style: 'destructive', onPress: handleComplete },
+                ]
+              );
             }}>
               <Feather name="check-circle" size={17} color={colors.primaryForeground} />
               <Text style={s.primaryBtnTxt}>إنهاء الرحلة</Text>
@@ -487,42 +484,6 @@ export default function DashboardScreen() {
         )}
       </View>
 
-      {/* ─── مودال إنهاء الرحلة ─── */}
-      <Modal visible={showCompleteModal} transparent animationType="slide">
-        <View style={s.modalOverlay}>
-          <View style={[s.modalBox, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={s.modalHandle} />
-            <Text style={s.modalTitle}>تفاصيل الرحلة</Text>
-            <Text style={s.modalSub}>
-              {accDistanceRef.current > 0
-                ? '✅ تم الحساب تلقائياً من GPS — يمكنك التعديل إذا لزم'
-                : 'أدخل البيانات الفعلية لاحتساب الأجرة'}
-            </Text>
-            <View style={s.modalField}>
-              <Text style={s.modalLabel}>المسافة الفعلية (كم)</Text>
-              <TextInput style={s.modalInput} value={distanceKm} onChangeText={setDistanceKm}
-                keyboardType="decimal-pad" placeholder="مثال: 5.2"
-                placeholderTextColor={colors.mutedForeground} textAlign="right" />
-            </View>
-            <View style={s.modalField}>
-              <Text style={s.modalLabel}>مدة الرحلة (دقيقة)</Text>
-              <TextInput style={s.modalInput} value={durationMin} onChangeText={setDurationMin}
-                keyboardType="decimal-pad" placeholder="مثال: 18"
-                placeholderTextColor={colors.mutedForeground} textAlign="right" />
-            </View>
-            <View style={s.modalBtns}>
-              <TouchableOpacity style={[s.modalBtn, s.modalCancel]} onPress={() => setShowCompleteModal(false)}>
-                <Text style={s.modalCancelTxt}>إلغاء</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[s.modalBtn, s.modalConfirm]} onPress={handleComplete} disabled={completeMutation.isPending}>
-                {completeMutation.isPending
-                  ? <ActivityIndicator color={colors.primaryForeground} />
-                  : <Text style={s.modalConfirmTxt}>تأكيد الإنهاء</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }

@@ -188,7 +188,7 @@ router.post("/admin/discount-codes", async (req, res) => {
     maxUses,
     currentUses: 0,
     isActive: true,
-    expiresAt: expiresAt ? new Date(expiresAt) : null,
+    expiresAt: expiresAt && expiresAt !== '' ? new Date(expiresAt) : null,
   }).returning();
   res.status(201).json(dc);
 });
