@@ -23,7 +23,7 @@ import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}`);
 
 SplashScreen.preventAutoHideAsync();
 
