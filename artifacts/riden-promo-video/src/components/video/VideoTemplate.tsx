@@ -1,5 +1,5 @@
 import { useVideoPlayer } from '@/lib/video';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 import { Download } from 'lucide-react';
 
