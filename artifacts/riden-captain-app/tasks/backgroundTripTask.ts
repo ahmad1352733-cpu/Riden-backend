@@ -46,7 +46,7 @@ try {
         content: {
           title: '🚖 طلب رحلة جديد!',
           body: `${trip.pickupAddress ?? 'موقع جديد'} ← ${trip.dropoffAddress ?? 'وجهة'}`,
-          data: { tripId: trip.id },
+          data: { tripId: trip.id, screen: 'trip-request' },
           sound: true,
           priority: Notifications.AndroidNotificationPriority.MAX,
         },
