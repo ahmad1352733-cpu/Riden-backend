@@ -15,6 +15,14 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function navigate(router: ReturnType<typeof useRouter>, data: any) {
+  if (data?.screen === 'notifications') {
+    router.replace('/(tabs)/notifications');
+  } else if (data?.screen === 'trip-update') {
+    router.replace('/(tabs)');
+  }
+}
+
 export function usePushNotifications(token: string | null) {
   const router = useRouter();
   const responseListener = useRef<Notifications.EventSubscription>();
@@ -23,11 +31,17 @@ export function usePushNotifications(token: string | null) {
     if (!token) return;
     registerForPush(token);
 
+    // ─── التطبيق كان مغلقاً (killed) ───
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (!response) return;
+      const data = response.notification.request.content.data as any;
+      navigate(router, data);
+    });
+
+    // ─── التطبيق في الخلفية أو مفتوح ───
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data as any;
-      if (data?.screen === 'notifications') {
-        router.replace('/(tabs)/notifications');
-      }
+      navigate(router, data);
     });
 
     return () => { responseListener.current?.remove(); };
@@ -41,6 +55,15 @@ async function registerForPush(authToken: string) {
         name: 'الإشعارات',
         importance: Notifications.AndroidImportance.HIGH,
         sound: 'default',
+      });
+      await Notifications.setNotificationChannelAsync('trip-updates', {
+        name: 'تحديثات الرحلة',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#6366F1',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
       });
     }
 

@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 
 const API = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}/api`;
 
-// تهيئة كيفية عرض الإشعارات عند فتح التطبيق
+// عرض الإشعارات حتى لو التطبيق مفتوح
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -16,28 +16,38 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function navigate(router: ReturnType<typeof useRouter>, data: any) {
+  if (data?.screen === 'trip-request') {
+    router.replace('/(tabs)');
+  } else if (data?.screen === 'notifications') {
+    router.replace('/(tabs)/notifications');
+  }
+}
+
 export function usePushNotifications(token: string | null) {
   const router = useRouter();
   const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const responseListener     = useRef<Notifications.EventSubscription>();
 
   useEffect(() => {
     if (!token) return;
     registerForPush(token);
 
-    // لما يصل إشعار والتطبيق مفتوح
-    notificationListener.current = Notifications.addNotificationReceivedListener(_notification => {
-      // يعرض الإشعار تلقائياً بسبب setNotificationHandler
+    // ─── حالة: التطبيق كان مغلقاً (killed) والمستخدم ضغط الإشعار ───
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (!response) return;
+      const data = response.notification.request.content.data as any;
+      navigate(router, data);
     });
 
-    // لما يضغط الكابتن على الإشعار
+    // ─── حالة: التطبيق مفتوح أو في الخلفية (background) ───
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
+      // يعرض الإشعار تلقائياً عبر setNotificationHandler
+    });
+
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data as any;
-      if (data?.screen === 'trip-request') {
-        router.replace('/(tabs)');
-      } else if (data?.screen === 'notifications') {
-        router.replace('/(tabs)/notifications');
-      }
+      navigate(router, data);
     });
 
     return () => {
@@ -49,7 +59,6 @@ export function usePushNotifications(token: string | null) {
 
 async function registerForPush(authToken: string) {
   try {
-    // إنشاء قناة Android
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('trip-requests', {
         name: 'طلبات الرحلات',
@@ -67,7 +76,6 @@ async function registerForPush(authToken: string) {
       });
     }
 
-    // طلب إذن الإشعارات
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
@@ -76,12 +84,10 @@ async function registerForPush(authToken: string) {
     }
     if (finalStatus !== 'granted') return;
 
-    // جلب التوكن
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'c31c7e21-67aa-4b65-a241-0ddb7e6b7bbc',
+      projectId: 'c31c7e21-67aa-4b65-a241-0bdb7e6b7bbc',
     });
 
-    // إرسال التوكن للسيرفر
     await fetch(`${API}/users/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
