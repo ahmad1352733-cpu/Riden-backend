@@ -180,7 +180,7 @@ export default function DashboardScreen() {
         await startForegroundService();
 
         const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 3000 },
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 3, timeInterval: 2000 },
           (loc) => {
             const { latitude, longitude } = loc.coords;
             setCaptainLoc({ lat: latitude, lng: longitude });

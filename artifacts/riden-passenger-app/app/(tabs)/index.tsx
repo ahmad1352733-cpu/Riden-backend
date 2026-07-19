@@ -198,7 +198,7 @@ export default function HomeScreen() {
 
   // ─── تتبع موقع الكابتن (حي) ─────────────────────────────────────────────
   const { data: tracking } = useGetTripTracking(tripId, {
-    query: { enabled: !!tripId && !!trip?.captainId, refetchInterval: 3000 },
+    query: { enabled: !!tripId && !!trip?.captainId, refetchInterval: 2000 },
   } as any);
 
   const passengerLocMutation = useUpdatePassengerLocation();
@@ -215,7 +215,7 @@ export default function HomeScreen() {
       } catch { /* ignore */ }
     };
     send();
-    const interval = setInterval(send, 5000);
+    const interval = setInterval(send, 3000);
     return () => clearInterval(interval);
   }, [tripId, status]);
 
