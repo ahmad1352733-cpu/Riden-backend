@@ -19,30 +19,18 @@ export function Scene5() {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0A0A0A]/80 to-[#0A0A0A]" />
       
       <div className="z-10 flex flex-col items-center justify-center w-full" dir="rtl">
-        {/* App Icon */}
+        {/* Real RIDEN Logo — full reveal */}
         <motion.div
-          className="mb-6"
-          initial={{ scale: 0, rotate: -20, opacity: 0 }}
-          animate={{ scale: 1, rotate: 0, opacity: 1 }}
-          transition={{ delay: 0.3, type: "spring", stiffness: 180, damping: 18 }}
+          className="mb-4"
+          initial={{ scale: 0.6, opacity: 0, y: 30 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+          style={{ filter: 'drop-shadow(0 0 40px rgba(255,179,0,0.6))' }}
         >
           <img
-            src={`${import.meta.env.BASE_URL}images/riden_icon.png`}
-            className="w-[16vw] h-[16vw] object-contain drop-shadow-[0_0_60px_rgba(255,60,0,0.8)]"
-            alt="RIDEN Icon"
-          />
-        </motion.div>
-
-        {/* Logo wordmark */}
-        <motion.div
-          className="mb-2"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.9, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}images/riden_logo.png`}
-            className="w-[35vw] object-contain drop-shadow-[0_4px_24px_rgba(255,138,0,0.5)]"
+            src={`${import.meta.env.BASE_URL}images/riden_logo_real.jpg`}
+            className="w-[50vw] object-contain rounded-2xl"
+            style={{ mixBlendMode: 'screen' }}
             alt="RIDEN"
           />
         </motion.div>

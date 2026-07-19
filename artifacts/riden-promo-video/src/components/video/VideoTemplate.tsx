@@ -84,16 +84,11 @@ export default function VideoTemplate() {
           transition={{ duration: 0.8, delay: 0.5 }}
         >
           <img
-            src={`${import.meta.env.BASE_URL}images/riden_icon.png`}
-            className="w-[5vw] h-[5vw] object-contain drop-shadow-[0_0_12px_rgba(255,60,0,0.7)]"
+            src={`${import.meta.env.BASE_URL}images/riden_logo_real.jpg`}
+            className="h-[6vw] object-contain"
+            style={{ mixBlendMode: 'screen' }}
             alt="RIDEN"
           />
-          <span
-            className="text-[2.2vw] font-black font-display text-white tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
-            style={{ textShadow: '0 0 20px rgba(255,138,0,0.5)' }}
-          >
-            RIDEN
-          </span>
         </motion.div>
       )}
     </div>
