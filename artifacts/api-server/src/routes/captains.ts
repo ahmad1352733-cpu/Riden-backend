@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import {
-  captainsTable, usersTable, tripsTable, transactionsTable, tripRequestsTable,
+  captainsTable, usersTable, tripsTable, transactionsTable, tripRequestsTable, tripGpsPointsTable,
 } from "@workspace/db/schema";
 import { eq, desc, and, gte } from "drizzle-orm";
 import { requireAuth, signToken } from "../lib/auth";
@@ -75,9 +75,22 @@ router.put("/captains/me/location", requireAuth, async (req, res) => {
   }
   const data = await getCaptainByUserId(req.userId!);
   if (!data) { res.status(404).json({ error: "Not found" }); return; }
+
+  // تحديث موقع الكابتن
   await db.update(captainsTable).set({
     currentLat: lat, currentLng: lng, locationUpdatedAt: new Date(),
   }).where(eq(captainsTable.id, data.captain.id));
+
+  // إذا في رحلة جارية — خزّن النقطة لحساب المسافة لاحقاً
+  const [activeTrip] = await db
+    .select({ id: tripsTable.id })
+    .from(tripsTable)
+    .where(and(eq(tripsTable.captainId, data.captain.id), eq(tripsTable.status, "started")))
+    .limit(1);
+  if (activeTrip) {
+    await db.insert(tripGpsPointsTable).values({ tripId: activeTrip.id, lat, lng });
+  }
+
   res.json({ success: true });
 });
 

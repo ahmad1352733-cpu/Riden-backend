@@ -8,3 +8,4 @@ export * from "./transactions";
 export * from "./trip_requests";
 export * from "./settings";
 export * from "./notifications";
+export * from "./trip_gps_points";

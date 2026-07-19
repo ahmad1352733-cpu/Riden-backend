@@ -7,8 +7,9 @@ import {
   discountCodesTable,
   transactionsTable,
   tripRequestsTable,
+  tripGpsPointsTable,
 } from "@workspace/db/schema";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, asc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sendPush } from "../lib/push";
 import {
@@ -294,18 +295,23 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
     res.status(400).json({ error: "Cannot complete this trip" }); return;
   }
 
-  const { distanceKm: clientDistanceKm } = req.body;
-  if (typeof clientDistanceKm !== "number" || clientDistanceKm < 0) {
-    res.status(400).json({ error: "distanceKm required" }); return;
-  }
+  // احسب المسافة من نقاط GPS المخزّنة على السيرفر منذ بداية الرحلة
+  const gpsPoints = await db
+    .select({ lat: tripGpsPointsTable.lat, lng: tripGpsPointsTable.lng })
+    .from(tripGpsPointsTable)
+    .where(eq(tripGpsPointsTable.tripId, trip.id))
+    .orderBy(asc(tripGpsPointsTable.recordedAt));
 
-  // المسافة المستقيمة من الإحداثيات المخزنة كضمان للحد الأدنى
-  const straightLineKm = haversineKm(
-    Number(trip.pickupLat), Number(trip.pickupLng),
-    Number(trip.dropoffLat), Number(trip.dropoffLng),
-  );
-  // خذ الأكبر: مسافة GPS المتراكمة أو المسافة المستقيمة
-  const distanceKm = Math.max(clientDistanceKm, straightLineKm);
+  let serverDistanceKm = 0;
+  for (let i = 1; i < gpsPoints.length; i++) {
+    const d = haversineKm(
+      gpsPoints[i - 1].lat, gpsPoints[i - 1].lng,
+      gpsPoints[i].lat, gpsPoints[i].lng,
+    );
+    if (d < 5) serverDistanceKm += d; // تجاهل القفزات الكبيرة
+  }
+  // حد أدنى 0.1 كم إذا GPS ما سجّل نقاط كافية
+  const distanceKm = Math.max(Math.round(serverDistanceKm * 100) / 100, 0.1);
 
   // الوقت يُحسب من السيرفر — لا يمكن للكابتن التلاعب به
   const now = new Date();
@@ -340,6 +346,9 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
     { captainId: captainData.captain.id, tripId: trip.id, amount: earning, type: "trip_earning", note: `رحلة رقم #${trip.id} - أجرة نقدية` },
     { captainId: captainData.captain.id, tripId: trip.id, amount: -commission, type: "trip_commission", note: `عمولة ${Math.round(commissionRate * 100)}% على رحلة #${trip.id}` },
   ]);
+
+  // حذف نقاط GPS بعد حساب المسافة (تنظيف)
+  await db.delete(tripGpsPointsTable).where(eq(tripGpsPointsTable.tripId, trip.id));
 
   res.json(await buildTripResponse(updated));
 });
