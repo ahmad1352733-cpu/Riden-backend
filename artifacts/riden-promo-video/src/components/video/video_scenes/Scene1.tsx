@@ -17,24 +17,29 @@ export function Scene1() {
         animate={{ scale: 1 }}
         transition={{ duration: 6, ease: "easeOut" }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/40 to-transparent" />
-      
-      <div className="z-10 flex flex-col items-center justify-center text-center w-full" dir="rtl">
+
+      {/* Dark gradient — stronger at bottom for text */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
+
+      {/* Content — bottom-third of screen */}
+      <div className="absolute bottom-[16%] left-0 right-0 z-10 flex flex-col items-center text-center px-8" dir="rtl">
         <motion.h1
-          className="text-[6vw] font-black font-display text-white drop-shadow-2xl mb-4 leading-none"
-          initial={{ y: 40, opacity: 0 }}
+          className="text-[9vw] font-black font-display text-white drop-shadow-2xl mb-3 leading-tight"
+          initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.8, duration: 1, ease: [0.16, 1, 0.3, 1] }}
         >
           عمان لا تنام...
         </motion.h1>
+
         <motion.div
           className="w-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--color-accent-gold)] to-transparent"
-          animate={{ width: "30vw" }}
+          animate={{ width: "60vw" }}
           transition={{ delay: 1.5, duration: 1.5, ease: "easeInOut" }}
         />
+
         <motion.p
-          className="text-[2.5vw] text-[var(--color-text-secondary)] font-body font-medium mt-6"
+          className="text-[5vw] text-[var(--color-text-secondary)] font-body font-medium mt-5"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.8, duration: 1 }}
