@@ -20,15 +20,11 @@ export interface PushMessage {
 export async function sendPushNotifications(messages: PushMessage[]): Promise<void> {
   if (messages.length === 0) return;
 
-  // Expo Push API يقبل حتى 100 رسالة في الطلب الواحد
-  const chunks: PushMessage[][] = [];
-  for (let i = 0; i < messages.length; i += 100) {
-    chunks.push(messages.slice(i, i + 100));
-  }
-
-  for (const chunk of chunks) {
+  // نرسل كل رسالة منفردة لتجنب خطأ PUSH_TOO_MANY_EXPERIENCE_IDS
+  // (يحدث عند خلط توكنات من تطبيقات/حسابات Expo مختلفة في طلب واحد)
+  for (const message of messages) {
     try {
-      console.log("[push] sending to tokens:", chunk.map(m => m.to));
+      console.log("[push] sending to token:", message.to);
       const res = await fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
         headers: {
@@ -36,17 +32,12 @@ export async function sendPushNotifications(messages: PushMessage[]): Promise<vo
           "Accept-Encoding": "gzip, deflate",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(chunk),
+        body: JSON.stringify(message),
       });
       const json = await res.json() as any;
       console.log("[push] expo response:", JSON.stringify(json));
-      // تحقق من أخطاء DeviceNotRegistered
-      if (json?.data) {
-        for (const ticket of json.data) {
-          if (ticket.status === "error") {
-            console.error("[push] ticket error:", JSON.stringify(ticket));
-          }
-        }
+      if (json?.data?.status === "error") {
+        console.error("[push] ticket error:", JSON.stringify(json.data));
       }
     } catch (e) {
       console.error("[push] failed to send:", e);
