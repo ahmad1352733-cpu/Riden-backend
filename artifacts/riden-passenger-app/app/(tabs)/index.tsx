@@ -110,10 +110,13 @@ export default function HomeScreen() {
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({});
-        setUserLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      }
+      if (status !== 'granted') return;
+      // آخر موقع محفوظ فوراً — الخريطة تتمركز بدون انتظار
+      const last = await Location.getLastKnownPositionAsync({});
+      if (last) setUserLoc({ lat: last.coords.latitude, lng: last.coords.longitude });
+      // تحديث بالموقع الدقيق في الخلفية
+      const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setUserLoc({ lat: fresh.coords.latitude, lng: fresh.coords.longitude });
     })();
   }, []);
 

@@ -158,8 +158,12 @@ export default function DashboardScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
-        const pos = await Location.getCurrentPositionAsync({});
-        setCaptainLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        // آخر موقع محفوظ فوراً — الخريطة تتمركز بدون انتظار
+        const last = await Location.getLastKnownPositionAsync({});
+        if (last) setCaptainLoc({ lat: last.coords.latitude, lng: last.coords.longitude });
+        // تحديث بالموقع الدقيق في الخلفية
+        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setCaptainLoc({ lat: fresh.coords.latitude, lng: fresh.coords.longitude });
       } catch { /* ignore */ }
     })();
   }, []);
