@@ -57,8 +57,20 @@ export function usePushNotifications(token: string | null) {
   }, [token]);
 }
 
+async function dbg(step: string, data?: object) {
+  try {
+    await fetch(`${API}/debug/push-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step, data }),
+    });
+  } catch {}
+}
+
 async function registerForPush(authToken: string) {
   try {
+    await dbg('start', { platform: Platform.OS });
+
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('trip-requests', {
         name: 'طلبات الرحلات',
@@ -88,23 +100,32 @@ async function registerForPush(authToken: string) {
     }
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    await dbg('permission-check', { existingStatus });
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
+      await dbg('permission-request', { finalStatus });
     }
-    if (finalStatus !== 'granted') return;
+    if (finalStatus !== 'granted') {
+      await dbg('permission-denied', { finalStatus });
+      return;
+    }
 
+    await dbg('getting-expo-token');
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: 'c31c7e21-67aa-4b65-a241-0bdb7e6b7bbc',
     });
+    await dbg('got-expo-token', { token: tokenData.data });
 
-    await fetch(`${API}/users/push-token`, {
+    const resp = await fetch(`${API}/users/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({ token: tokenData.data }),
     });
-  } catch (e) {
+    await dbg('saved-token', { status: resp.status });
+  } catch (e: any) {
+    await dbg('error', { message: String(e?.message ?? e) });
     console.log('[push] register error:', e);
   }
 }

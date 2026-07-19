@@ -9,6 +9,7 @@ import notificationsRouter from "./notifications";
 import pushTokenRouter from "./push-token";
 import routesResourceRouter from "./routes-resource";
 import adminRouter from "./admin";
+import debugRouter from "./debug";
 
 const router: IRouter = Router();
 
@@ -51,5 +52,6 @@ router.use(notificationsRouter);
 router.use(pushTokenRouter);
 router.use(routesResourceRouter);
 router.use(adminRouter);
+router.use(debugRouter);
 
 export default router;
