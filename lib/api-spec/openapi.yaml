@@ -1140,12 +1140,9 @@ components:
 
     CompleteTripInput:
       type: object
-      required: [distanceKm, durationMin]
+      required: [distanceKm]
       properties:
         distanceKm:
-          type: number
-          minimum: 0
-        durationMin:
           type: number
           minimum: 0
 

@@ -194,8 +194,6 @@ export interface TripRequest {
 export interface CompleteTripInput {
   /** @minimum 0 */
   distanceKm: number;
-  /** @minimum 0 */
-  durationMin: number;
 }
 
 export interface TripRatingInput {
