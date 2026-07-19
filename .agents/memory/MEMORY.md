@@ -2,3 +2,4 @@
 - [RIDEN Seeding](riden-seeding.md) — use psql $DATABASE_URL directly to seed; tsx approach fails due to monorepo package resolution
 - [RIDEN Auth Flow](riden-auth.md) — JWT in SESSION_SECRET, stored in localStorage "riden_token"; admin role must be set via psql (register endpoint only creates passengers)
 - [EAS Build Quota & FCM Setup](eas-fcm-setup.md) — free plan builds exhausted mid-month; FCM needs Firebase + rebuild; foreground service needs expo-task-manager rebuild
+- [FCM Push Resolution](fcm-push-resolution.md) — use google-auth-library for FCM v1; manual JWT fails with unsupported_grant_type
