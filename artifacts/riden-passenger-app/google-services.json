@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "466247454855",
+    "project_id": "riden-be20b",
+    "storage_bucket": "riden-be20b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466247454855:android:b138f6fbd1409286cfa822",
+        "android_client_info": {
+          "package_name": "jo.riden.captain"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7T-eXadVkfB8iUqzdbw_q1gK-JCRec1s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:466247454855:android:2102ee72ab546a43cfa822",
+        "android_client_info": {
+          "package_name": "jo.riden.passenger"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD7T-eXadVkfB8iUqzdbw_q1gK-JCRec1s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

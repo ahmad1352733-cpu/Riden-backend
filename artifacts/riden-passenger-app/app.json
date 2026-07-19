@@ -29,6 +29,7 @@
     },
     "android": {
       "package": "jo.riden.passenger",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0F1B2D"
