@@ -49,9 +49,9 @@ router.use(tripsRouter);
 router.use(discountCodesRouter);
 router.use(complaintsRouter);
 router.use(notificationsRouter);
+router.use(debugRouter);
 router.use(pushTokenRouter);
 router.use(routesResourceRouter);
 router.use(adminRouter);
-router.use(debugRouter);
 
 export default router;
