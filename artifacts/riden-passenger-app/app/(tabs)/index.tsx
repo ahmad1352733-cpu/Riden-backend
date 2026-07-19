@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ActivityIndicator,
-  Platform, TextInput, Modal, FlatList, Linking,
+  Platform, TextInput, Modal, FlatList, Linking, Alert,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -154,10 +154,17 @@ export default function HomeScreen() {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       // استخدم الموقع المحفوظ فوراً بدون انتظار GPS جديد
-      selectPlace({ id: 0, name: 'موقعي الحالي 📍', lat: userLoc.lat, lng: userLoc.lng });
+      const loc = { id: 0, name: 'موقعي الحالي 📍', lat: userLoc.lat, lng: userLoc.lng };
+      // إذا المودال مفتوح استخدم selectPlace، وإلا حط الموقع في نقطة الانطلاق مباشرة
+      if (pickingFor) {
+        selectPlace(loc);
+      } else {
+        setPickup(loc);
+        setFareData(null);
+      }
       // حدّث الموقع في الخلفية للمرة القادمة
       Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
-        .then(loc => setUserLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude }))
+        .then(loc2 => setUserLoc({ lat: loc2.coords.latitude, lng: loc2.coords.longitude }))
         .catch(() => {});
     } catch { /* ignore */ }
   };
@@ -166,14 +173,16 @@ export default function HomeScreen() {
   const handleMapTap = async (lat: number, lng: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const placeId = Date.now();
+    // احفظ pickingFor قبل ما يتغير بعد selectPlace
+    const forField = pickingFor;
     // اختر الموقع فوراً بالإحداثيات
     selectPlace({ id: placeId, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
     // جلب اسم الشارع في الخلفية وتحديث الاسم
     setReverseLoading(true);
-    reverseGeocode(lat, lng).then(name => {
+    reverseGeocode(lat, lng).then(resolvedName => {
       setReverseLoading(false);
-      if (pickingFor === 'pickup') setPickup(p => p?.id === placeId ? { ...p, name } : p);
-      else setDropoff(p => p?.id === placeId ? { ...p, name } : p);
+      if (forField === 'pickup') setPickup(p => p?.id === placeId ? { ...p, name: resolvedName } : p);
+      else setDropoff(p => p?.id === placeId ? { ...p, name: resolvedName } : p);
     }).catch(() => setReverseLoading(false));
   };
 
@@ -233,6 +242,10 @@ export default function HomeScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setFareData(null);
         refetchTrip();
+      },
+      onError: (err: any) => {
+        const msg = err?.response?.data?.error ?? 'فشل طلب الرحلة، حاول مجدداً';
+        Alert.alert('خطأ', typeof msg === 'string' ? msg : 'فشل طلب الرحلة، حاول مجدداً');
       },
     },
   } as any);
