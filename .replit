@@ -11,6 +11,23 @@ env = { "CI" = "true" }
 [workflows]
 runButton = "Project"
 
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "artifacts/riden-promo-video: web"
+
+[[workflows.workflow]]
+name = "artifacts/riden-promo-video: web"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=23100 BASE_PATH=/riden-promo-video/ pnpm --filter @workspace/riden-promo-video run dev"
+
 [agent]
 stack = "PNPM_WORKSPACE"
 expertMode = true

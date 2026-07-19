@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/riden-promo-video"
+title = "RIDEN - الفيديو الإعلاني"
+version = "1.0.0"
+id = "artifacts/riden-promo-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/riden-promo-video" ]
+localPort = 23100
+
+[services.development]
+run = "pnpm --filter @workspace/riden-promo-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/riden-promo-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/riden-promo-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23100"
+BASE_PATH = "/riden-promo-video/"

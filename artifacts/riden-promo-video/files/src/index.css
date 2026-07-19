@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Tajawal:wght@400;500;700&display=swap');
+@import 'tailwindcss';
+
+:root {
+  --color-primary: #121212;
+  --color-secondary: #2C2C2C;
+  --color-accent: #FF8A00; /* Fiery orange */
+  --color-accent-gold: #FFB300; /* Gold */
+
+  --color-bg-light: #ffffff;
+  --color-bg-dark: #0A0A0A; /* Deep dark charcoal */
+  --color-bg-muted: #1A1A1A;
+
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #B0B0B0;
+  --color-text-muted: #737373;
+  --color-text-inverse: #000000;
+
+  --color-success: #00E676;
+  --color-warning: #FFB300;
+  --color-error: #FF3D00;
+
+  --font-display: 'Cairo', sans-serif;
+  --font-body: 'Tajawal', sans-serif;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-bg-light: var(--color-bg-light);
+  --color-bg-dark: var(--color-bg-dark);
+  --color-bg-muted: var(--color-bg-muted);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+body {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-primary);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-accent-gold) 0%, var(--color-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
