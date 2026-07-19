@@ -170,7 +170,7 @@ export default function HomeScreen() {
 
   // ─── الرحلة النشطة ───────────────────────────────────────────────────────
   const { data: activeTrip, refetch: refetchTrip } = useGetActiveTrip({
-    query: { refetchInterval: 5000 },
+    query: { refetchInterval: 3000 },
   } as any);
 
   const trip       = activeTrip as any;
@@ -209,7 +209,7 @@ export default function HomeScreen() {
       } catch { /* ignore */ }
     };
     send();
-    const interval = setInterval(send, 15000);
+    const interval = setInterval(send, 5000);
     return () => clearInterval(interval);
   }, [tripId, status]);
 

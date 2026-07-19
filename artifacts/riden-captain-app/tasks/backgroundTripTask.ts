@@ -71,8 +71,8 @@ export async function startForegroundService(): Promise<void> {
 
     await Location.startLocationUpdatesAsync(BACKGROUND_LOCATION_TASK, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 15000,
-      distanceInterval: 50,
+      timeInterval: 5000,
+      distanceInterval: 10,
       showsBackgroundLocationIndicator: true,
       foregroundService: {
         notificationTitle: 'RIDEN — أنت متاح',

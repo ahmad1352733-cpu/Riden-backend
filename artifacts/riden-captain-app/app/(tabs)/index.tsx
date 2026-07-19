@@ -63,7 +63,7 @@ export default function DashboardScreen() {
   const isApproved = captain?.isApproved ?? false;
 
   const { data: pendingTrip } = useGetCaptainPendingTrip({
-    query: { enabled: !!token && isApproved && isOnline, refetchInterval: isApproved && isOnline ? 5000 : false },
+    query: { enabled: !!token && isApproved && isOnline, refetchInterval: isApproved && isOnline ? 3000 : false },
   });
 
   const { data: captainTrips, refetch: refetchTrips } = useGetCaptainTrips({
@@ -180,7 +180,7 @@ export default function DashboardScreen() {
         await startForegroundService();
 
         const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 20, timeInterval: 10000 },
+          { accuracy: Location.Accuracy.High, distanceInterval: 5, timeInterval: 3000 },
           (loc) => {
             const { latitude, longitude } = loc.coords;
             setCaptainLoc({ lat: latitude, lng: longitude });
