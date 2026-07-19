@@ -2,56 +2,39 @@
  * FCM v1 Push Notifications
  * يستخدم Firebase Cloud Messaging HTTP v1 API مع Service Account
  */
+import { GoogleAuth } from "google-auth-library";
 
 const PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? "riden-be20b";
 const FCM_V1_URL = `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`;
 
-// Service account credentials (نخزّنهم كـ env vars)
-const SA_CLIENT_EMAIL = process.env.FIREBASE_CLIENT_EMAIL ?? "";
-const SA_PRIVATE_KEY  = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
+let auth: GoogleAuth | null = null;
 
-let cachedToken: { token: string; exp: number } | null = null;
+function getAuth(): GoogleAuth {
+  if (auth) return auth;
 
-async function getAccessToken(): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  if (cachedToken && cachedToken.exp > now + 60) return cachedToken.token;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? "";
+  const privateKey  = (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n");
 
-  if (!SA_CLIENT_EMAIL || !SA_PRIVATE_KEY) {
+  if (!clientEmail || !privateKey) {
     throw new Error("FIREBASE_CLIENT_EMAIL / FIREBASE_PRIVATE_KEY غير مضبوطة");
   }
 
-  // بناء JWT يدوياً بدون مكتبات خارجية
-  const { createSign } = await import("node:crypto");
-  const header  = b64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
-  const payload = b64url(JSON.stringify({
-    iss: SA_CLIENT_EMAIL,
-    scope: "https://www.googleapis.com/auth/firebase.messaging",
-    aud: "https://oauth2.googleapis.com/token",
-    iat: now,
-    exp: now + 3600,
-  }));
-  const toSign = `${header}.${payload}`;
-  const sign = createSign("RSA-SHA256");
-  sign.update(toSign);
-  const sig = sign.sign(SA_PRIVATE_KEY, "base64url");
-  const jwt = `${toSign}.${sig}`;
-
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth2:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
+  auth = new GoogleAuth({
+    credentials: {
+      client_email: clientEmail,
+      private_key: privateKey,
+    },
+    scopes: ["https://www.googleapis.com/auth/firebase.messaging"],
   });
-  const json = await res.json() as any;
-  if (!json.access_token) throw new Error("FCM OAuth2 فشل: " + JSON.stringify(json));
-  cachedToken = { token: json.access_token, exp: now + (json.expires_in ?? 3600) };
-  return cachedToken.token;
+
+  return auth;
 }
 
-function b64url(str: string) {
-  return Buffer.from(str).toString("base64url");
+async function getAccessToken(): Promise<string> {
+  const client = await getAuth().getClient();
+  const tokenRes = await client.getAccessToken();
+  if (!tokenRes.token) throw new Error("فشل الحصول على access token من Google");
+  return tokenRes.token;
 }
 
 export async function sendPush(
