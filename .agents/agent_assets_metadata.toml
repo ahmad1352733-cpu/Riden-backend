@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "U8hQxWZ1Md3rc2ZolzDid"
+uri = "file://riden-captain.apk"
+type = "unspecified"
+title = "RIDEN Captain APK"
