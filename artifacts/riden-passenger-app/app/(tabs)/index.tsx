@@ -150,22 +150,28 @@ export default function HomeScreen() {
   const handleUseMyLocation = async () => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
-      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { latitude, longitude } = loc.coords;
-      setUserLoc({ lat: latitude, lng: longitude });
-      selectPlace({ id: 0, name: 'موقعي الحالي 📍', lat: latitude, lng: longitude });
+      // استخدم الموقع المحفوظ فوراً بدون انتظار GPS جديد
+      selectPlace({ id: 0, name: 'موقعي الحالي 📍', lat: userLoc.lat, lng: userLoc.lng });
+      // حدّث الموقع في الخلفية للمرة القادمة
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
+        .then(loc => setUserLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude }))
+        .catch(() => {});
     } catch { /* ignore */ }
   };
 
   // ─── الضغط على الخريطة لاختيار موقع ─────────────────────────────────────
   const handleMapTap = async (lat: number, lng: number) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const placeId = Date.now();
+    // اختر الموقع فوراً بالإحداثيات
+    selectPlace({ id: placeId, name: `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng });
+    // جلب اسم الشارع في الخلفية وتحديث الاسم
     setReverseLoading(true);
-    const name = await reverseGeocode(lat, lng);
-    setReverseLoading(false);
-    selectPlace({ id: Date.now(), name, lat, lng });
+    reverseGeocode(lat, lng).then(name => {
+      setReverseLoading(false);
+      if (pickingFor === 'pickup') setPickup(p => p?.id === placeId ? { ...p, name } : p);
+      else setDropoff(p => p?.id === placeId ? { ...p, name } : p);
+    }).catch(() => setReverseLoading(false));
   };
 
   // ─── الرحلة النشطة ───────────────────────────────────────────────────────
