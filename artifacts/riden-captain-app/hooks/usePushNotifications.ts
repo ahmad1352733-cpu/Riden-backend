@@ -68,11 +68,22 @@ async function registerForPush(authToken: string) {
         sound: 'default',
         enableVibrate: true,
         showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: true,
+      });
+      await Notifications.setNotificationChannelAsync('general', {
+        name: 'الإشعارات العامة',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'الإشعارات العامة',
-        importance: Notifications.AndroidImportance.HIGH,
+        name: 'الإشعارات',
+        importance: Notifications.AndroidImportance.MAX,
         sound: 'default',
+        showBadge: true,
       });
     }
 

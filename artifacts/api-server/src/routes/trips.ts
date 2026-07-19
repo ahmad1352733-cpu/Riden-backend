@@ -148,7 +148,7 @@ router.post("/trips", requireAuth, async (req, res) => {
         tokens,
         "🚗 طلب رحلة جديد!",
         `من: ${pickupAddress ?? "موقع الانطلاق"} → ${dropoffAddress ?? "موقع الوصول"}`,
-        { screen: "trip-request", tripId: trip.id },
+        { screen: "trip-request", tripId: trip.id, channelId: "trip-requests" },
         "high",
       );
     }

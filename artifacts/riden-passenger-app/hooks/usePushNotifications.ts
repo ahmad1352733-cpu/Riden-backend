@@ -51,10 +51,13 @@ export function usePushNotifications(token: string | null) {
 async function registerForPush(authToken: string) {
   try {
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'الإشعارات',
-        importance: Notifications.AndroidImportance.HIGH,
+      await Notifications.setNotificationChannelAsync('general', {
+        name: 'الإشعارات العامة',
+        importance: Notifications.AndroidImportance.MAX,
         sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
       await Notifications.setNotificationChannelAsync('trip-updates', {
         name: 'تحديثات الرحلة',
@@ -63,6 +66,13 @@ async function registerForPush(authToken: string) {
         lightColor: '#6366F1',
         sound: 'default',
         enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'الإشعارات',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
         showBadge: true,
       });
     }

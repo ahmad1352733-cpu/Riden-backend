@@ -67,7 +67,7 @@ router.post("/admin/notifications", requireAuth, async (req, res) => {
 
     // Push للمستخدم المحدد
     const [u] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, userId));
-    if (u?.pushToken) await sendPush([u.pushToken], title, body, { screen: "notifications" });
+    if (u?.pushToken) await sendPush([u.pushToken], title, body, { screen: "notifications", channelId: "general" });
 
     res.status(201).json(row);
   } else {
@@ -86,7 +86,7 @@ router.post("/admin/notifications", requireAuth, async (req, res) => {
         .from(usersTable)
         .where(or(...roleFilter.map(r => eq(usersTable.role, r as any))));
       const tokens = users.map(u => u.pushToken).filter(Boolean) as string[];
-      if (tokens.length > 0) await sendPush(tokens, title, body, { screen: "notifications" });
+      if (tokens.length > 0) await sendPush(tokens, title, body, { screen: "notifications", channelId: "general" });
     }
 
     res.status(201).json(row);

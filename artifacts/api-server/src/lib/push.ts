@@ -12,6 +12,9 @@ export interface PushMessage {
   priority?: "default" | "normal" | "high";
   channelId?: string;
   badge?: number;
+  ttl?: number;
+  expiration?: number;
+  mutableContent?: boolean;
 }
 
 export async function sendPushNotifications(messages: PushMessage[]): Promise<void> {
@@ -51,6 +54,7 @@ export async function sendPush(
   const valid = tokens.filter(t => t && t.startsWith("ExponentPushToken[")) as string[];
   if (valid.length === 0) return;
 
+  const channelId = (data?.channelId as string) ?? "general";
   await sendPushNotifications(
     valid.map(to => ({
       to,
@@ -58,8 +62,11 @@ export async function sendPush(
       body,
       sound: "default",
       priority,
-      channelId: data?.channelId as string ?? "default",
-      data: data ?? {},
+      channelId,
+      badge: 1,
+      ttl: 86400,          // 24 ساعة — لا يُحذف لو الجهاز كان أوف
+      mutableContent: true,
+      data: { ...(data ?? {}), channelId },
     }))
   );
 }
