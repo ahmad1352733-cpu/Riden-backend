@@ -8,6 +8,16 @@ import { startForegroundService, stopForegroundService } from '@/tasks/backgroun
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
+
+// حساب المسافة بين نقطتين GPS بالكيلومترات (Haversine)
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 import {
   useGetCaptainProfile,
   useUpdateCaptainAvailability,
@@ -37,6 +47,12 @@ export default function DashboardScreen() {
   const [durationMin, setDurationMin] = useState('');
   const locationSubRef    = useRef<Location.LocationSubscription | null>(null);
   const locationMutateRef = useRef<ReturnType<typeof useUpdateCaptainLocation>['mutate'] | null>(null);
+
+  // ─── تتبع المسافة والوقت أثناء الرحلة ──────────────────────────────────
+  const tripStartTimeRef    = useRef<number | null>(null);   // timestamp ms
+  const accDistanceRef      = useRef<number>(0);             // كم متراكمة
+  const lastTripLocRef      = useRef<{ lat: number; lng: number } | null>(null);
+  const activeTripIdRef     = useRef<number | null>(null);   // لمعرفة متى تبدأ رحلة جديدة
 
   // ─── البيانات ────────────────────────────────────────────────────────────
   const { data: captain, refetch: refetchProfile, isLoading: profileLoading } = useGetCaptainProfile({
@@ -117,6 +133,25 @@ export default function DashboardScreen() {
     },
   });
 
+  // ─── بدء/إعادة تعيين تتبع الرحلة عند تغيّر حالتها إلى "started" ────────
+  useEffect(() => {
+    if (activeTrip?.status === 'started') {
+      if (activeTripIdRef.current !== activeTrip.id) {
+        // رحلة جديدة بدأت — صفّر العداد
+        activeTripIdRef.current = activeTrip.id;
+        tripStartTimeRef.current = Date.now();
+        accDistanceRef.current   = 0;
+        lastTripLocRef.current   = null;
+      }
+    } else {
+      // لا توجد رحلة نشطة — صفّر
+      activeTripIdRef.current  = null;
+      tripStartTimeRef.current = null;
+      accDistanceRef.current   = 0;
+      lastTripLocRef.current   = null;
+    }
+  }, [activeTrip?.id, activeTrip?.status]);
+
   // ─── GPS للكابتن ─────────────────────────────────────────────────────────
   useEffect(() => {
     (async () => {
@@ -133,7 +168,6 @@ export default function DashboardScreen() {
     if (!isOnline || !isApproved) {
       locationSubRef.current?.remove();
       locationSubRef.current = null;
-      // أوقف الـ foreground service عند الذهاب offline
       stopForegroundService();
       return;
     }
@@ -143,15 +177,27 @@ export default function DashboardScreen() {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
 
-        // شغّل الـ foreground service (يبقي التطبيق حياً في الخلفية)
         await startForegroundService();
 
         const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 30, timeInterval: 15000 },
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 20, timeInterval: 10000 },
           (loc) => {
             const { latitude, longitude } = loc.coords;
             setCaptainLoc({ lat: latitude, lng: longitude });
             locationMutateRef.current?.({ data: { lat: latitude, lng: longitude } });
+
+            // تراكم المسافة فقط عند الرحلة الجارية
+            if (activeTripIdRef.current && tripStartTimeRef.current) {
+              if (lastTripLocRef.current) {
+                const d = haversineKm(
+                  lastTripLocRef.current.lat, lastTripLocRef.current.lng,
+                  latitude, longitude,
+                );
+                // تجاهل القفزات الكبيرة (GPS error > 5 كم)
+                if (d < 5) accDistanceRef.current += d;
+              }
+              lastTripLocRef.current = { lat: latitude, lng: longitude };
+            }
           },
         );
         if (cancelled) { sub.remove(); return; }
@@ -420,7 +466,16 @@ export default function DashboardScreen() {
                 <Text style={s.primaryBtnTxt}>اتجاهات للوجهة</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={s.primaryBtn} onPress={() => setShowCompleteModal(true)}>
+            <TouchableOpacity style={s.primaryBtn} onPress={() => {
+              // ملء تلقائي من GPS
+              const dist = accDistanceRef.current;
+              const elapsed = tripStartTimeRef.current
+                ? (Date.now() - tripStartTimeRef.current) / 60000
+                : 0;
+              if (dist > 0)    setDistanceKm(dist.toFixed(2));
+              if (elapsed > 0) setDurationMin(Math.round(elapsed).toString());
+              setShowCompleteModal(true);
+            }}>
               <Feather name="check-circle" size={17} color={colors.primaryForeground} />
               <Text style={s.primaryBtnTxt}>إنهاء الرحلة</Text>
             </TouchableOpacity>
@@ -434,7 +489,11 @@ export default function DashboardScreen() {
           <View style={[s.modalBox, { paddingBottom: insets.bottom + 16 }]}>
             <View style={s.modalHandle} />
             <Text style={s.modalTitle}>تفاصيل الرحلة</Text>
-            <Text style={s.modalSub}>أدخل البيانات الفعلية لاحتساب الأجرة</Text>
+            <Text style={s.modalSub}>
+              {accDistanceRef.current > 0
+                ? '✅ تم الحساب تلقائياً من GPS — يمكنك التعديل إذا لزم'
+                : 'أدخل البيانات الفعلية لاحتساب الأجرة'}
+            </Text>
             <View style={s.modalField}>
               <Text style={s.modalLabel}>المسافة الفعلية (كم)</Text>
               <TextInput style={s.modalInput} value={distanceKm} onChangeText={setDistanceKm}

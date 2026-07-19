@@ -114,7 +114,7 @@ async function registerForPush(authToken: string) {
 
     await dbg('getting-expo-token');
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'c31c7e21-67aa-4b65-a241-0bdb7e6b7bbc',
+      projectId: '40467eb7-0a19-4b65-9ea2-0e6be243882a',
     });
     await dbg('got-expo-token', { token: tokenData.data });
 
