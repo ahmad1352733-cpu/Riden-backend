@@ -9,11 +9,12 @@ export function Scene2() {
       exit={{ x: "-100%", opacity: 0, filter: "blur(10px)" }}
       transition={{ duration: 1.2, ease: [0.76, 0, 0.24, 1] }}
     >
-      <motion.img
-        src={`${import.meta.env.BASE_URL}images/hand_phone.jpg`}
-        className="absolute inset-0 w-full h-full object-cover opacity-80"
-        initial={{ scale: 1, x: 0 }}
-        animate={{ scale: 1.1, x: "-5%" }}
+      <motion.video
+        src={`${import.meta.env.BASE_URL}videos/clip1_2.mp4`}
+        className="absolute inset-0 w-full h-full object-cover opacity-90"
+        autoPlay muted loop playsInline
+        initial={{ scale: 1 }}
+        animate={{ scale: 1.05 }}
         transition={{ duration: 8, ease: "linear" }}
       />
       <div className="absolute inset-0 bg-gradient-to-l from-[#0A0A0A] via-[#0A0A0A]/80 to-transparent" />

@@ -9,10 +9,11 @@ export function Scene1() {
       exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
       transition={{ duration: 1.5, ease: [0.76, 0, 0.24, 1] }}
     >
-      <motion.img
-        src={`${import.meta.env.BASE_URL}images/amman_night.jpg`}
+      <motion.video
+        src={`${import.meta.env.BASE_URL}videos/clip3.mp4`}
         className="absolute inset-0 w-full h-full object-cover"
-        initial={{ scale: 1.2 }}
+        autoPlay muted loop playsInline
+        initial={{ scale: 1.1 }}
         animate={{ scale: 1 }}
         transition={{ duration: 6, ease: "easeOut" }}
       />

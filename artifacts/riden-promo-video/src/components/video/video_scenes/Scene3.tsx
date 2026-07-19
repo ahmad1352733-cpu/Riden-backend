@@ -9,11 +9,12 @@ export function Scene3() {
       exit={{ scale: 1.1, opacity: 0, filter: "blur(20px)" }}
       transition={{ duration: 1, ease: "easeInOut" }}
     >
-      <motion.img
-        src={`${import.meta.env.BASE_URL}images/luxury_car.jpg`}
+      <motion.video
+        src={`${import.meta.env.BASE_URL}videos/clip2_2.mp4`}
         className="absolute inset-0 w-full h-full object-cover"
-        initial={{ scale: 1.3, y: "10%" }}
-        animate={{ scale: 1, y: "0%" }}
+        autoPlay muted loop playsInline
+        initial={{ scale: 1.2 }}
+        animate={{ scale: 1 }}
         transition={{ duration: 7, ease: "easeOut" }}
       />
       <div className="absolute inset-0 bg-[#0A0A0A]/60" />
