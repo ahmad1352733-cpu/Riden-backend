@@ -72,6 +72,30 @@ export default function VideoTemplate() {
         {currentScene === 3 && <Scene4 key="s4" />}
         {currentScene === 4 && <Scene5 key="s5" />}
       </AnimatePresence>
+
+      {/* Persistent logo watermark — top-left corner on all scenes except 5 */}
+      {currentScene < 4 && (
+        <motion.div
+          key={`logo-${currentScene}`}
+          className="absolute top-[3vh] left-[3vw] z-40 flex items-center gap-3"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.5 }}
+        >
+          <img
+            src={`${import.meta.env.BASE_URL}images/riden_icon.png`}
+            className="w-[5vw] h-[5vw] object-contain drop-shadow-[0_0_12px_rgba(255,60,0,0.7)]"
+            alt="RIDEN"
+          />
+          <span
+            className="text-[2.2vw] font-black font-display text-white tracking-widest drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
+            style={{ textShadow: '0 0 20px rgba(255,138,0,0.5)' }}
+          >
+            RIDEN
+          </span>
+        </motion.div>
+      )}
     </div>
   );
 }
