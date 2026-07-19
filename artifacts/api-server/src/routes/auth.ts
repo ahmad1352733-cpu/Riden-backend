@@ -9,8 +9,9 @@ import { formatUser, formatCaptain } from "../lib/helpers";
 
 const router = Router();
 
+// POST /api/auth/register  (alias — يستخدمه الـ API client)
 // POST /api/auth/register/passenger
-router.post("/auth/register/passenger", async (req, res) => {
+router.post(["/auth/register", "/auth/register/passenger"], async (req, res) => {
   const parsed = RegisterPassengerBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.flatten() });

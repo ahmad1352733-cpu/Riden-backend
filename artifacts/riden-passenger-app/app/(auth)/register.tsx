@@ -40,7 +40,11 @@ export default function RegisterScreen() {
         router.replace('/(tabs)');
       },
       onError: (err: any) => {
-        setError(err?.response?.data?.error || 'فشل التسجيل، حاول مجدداً');
+        const raw = err?.response?.data?.error;
+        const msg = typeof raw === 'string'
+          ? raw
+          : raw?.formErrors?.[0] ?? Object.values(raw?.fieldErrors ?? {})?.[0]?.[0] ?? 'فشل التسجيل، حاول مجدداً';
+        setError(msg);
       },
     },
   });
