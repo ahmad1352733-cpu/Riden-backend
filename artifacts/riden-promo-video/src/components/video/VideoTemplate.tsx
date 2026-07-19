@@ -1,5 +1,6 @@
 import { useVideoPlayer } from '@/lib/video';
 import { AnimatePresence } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
@@ -20,11 +21,32 @@ export default function VideoTemplate() {
     durations: SCENE_DURATIONS,
   });
 
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = 0.7;
+    audio.loop = true;
+    audio.play().catch(() => {
+      // Autoplay blocked — play on first user interaction
+      const resume = () => { audio.play(); document.removeEventListener('click', resume); };
+      document.addEventListener('click', resume);
+    });
+  }, []);
+
   return (
     <div
       className="w-full h-screen overflow-hidden relative"
       style={{ backgroundColor: 'var(--color-bg-dark)' }}
     >
+      {/* Background audio */}
+      <audio
+        ref={audioRef}
+        src={`${import.meta.env.BASE_URL}audio/background.mp3`}
+        preload="auto"
+      />
+
       {/* Persistent global texture overlay */}
       <div className="absolute inset-0 pointer-events-none z-50 mix-blend-overlay opacity-10">
         <div className="w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] bg-repeat" />

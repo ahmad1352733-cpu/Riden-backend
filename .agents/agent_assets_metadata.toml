@@ -6,3 +6,9 @@ id = "U8hQxWZ1Md3rc2ZolzDid"
 uri = "file://riden-captain.apk"
 type = "unspecified"
 title = "RIDEN Captain APK"
+
+[[outputs]]
+id = "RaDbSi4yovQqZP2YAVy-K"
+uri = "file://artifacts/riden-promo-video/public/audio/background.mp3"
+type = "audio"
+title = "riden-promo-bg"
