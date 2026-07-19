@@ -28,16 +28,27 @@ export async function sendPushNotifications(messages: PushMessage[]): Promise<vo
 
   for (const chunk of chunks) {
     try {
-      await fetch("https://exp.host/--/api/v2/push/send", {
+      console.log("[push] sending to tokens:", chunk.map(m => m.to));
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
         method: "POST",
         headers: {
           "Accept": "application/json",
+          "Accept-Encoding": "gzip, deflate",
           "Content-Type": "application/json",
         },
         body: JSON.stringify(chunk),
       });
+      const json = await res.json() as any;
+      console.log("[push] expo response:", JSON.stringify(json));
+      // تحقق من أخطاء DeviceNotRegistered
+      if (json?.data) {
+        for (const ticket of json.data) {
+          if (ticket.status === "error") {
+            console.error("[push] ticket error:", JSON.stringify(ticket));
+          }
+        }
+      }
     } catch (e) {
-      // لا نوقف السيرفر إذا فشل الإشعار
       console.error("[push] failed to send:", e);
     }
   }

@@ -60,7 +60,16 @@
           "locationAlwaysAndWhenInUsePermission": "يستخدم RIDEN موقعك خلال الرحلات"
         }
       ],
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#22C55E",
+          "defaultChannel": "general",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

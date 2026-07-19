@@ -57,7 +57,16 @@
           "locationWhenInUsePermission": "يحتاج RIDEN إلى موقعك لإيجاد كابتن قريب منك."
         }
       ],
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#6366F1",
+          "defaultChannel": "general",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
