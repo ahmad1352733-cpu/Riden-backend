@@ -4,6 +4,7 @@ import {
   TextInput, Platform, Modal, Linking, ScrollView,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { startForegroundService, stopForegroundService } from '@/tasks/backgroundTripTask';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
@@ -132,6 +133,8 @@ export default function DashboardScreen() {
     if (!isOnline || !isApproved) {
       locationSubRef.current?.remove();
       locationSubRef.current = null;
+      // أوقف الـ foreground service عند الذهاب offline
+      stopForegroundService();
       return;
     }
     let cancelled = false;
@@ -139,6 +142,10 @@ export default function DashboardScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted' || cancelled) return;
+
+        // شغّل الـ foreground service (يبقي التطبيق حياً في الخلفية)
+        await startForegroundService();
+
         const sub = await Location.watchPositionAsync(
           { accuracy: Location.Accuracy.Balanced, distanceInterval: 30, timeInterval: 15000 },
           (loc) => {

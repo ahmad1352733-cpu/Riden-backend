@@ -22,6 +22,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+// تسجيل الـ background task عند تحميل التطبيق (يجب أن يكون قبل أي navigator)
+import '@/tasks/backgroundTripTask';
 
 setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}`);
 
