@@ -12,3 +12,15 @@ id = "RaDbSi4yovQqZP2YAVy-K"
 uri = "file://artifacts/riden-promo-video/public/audio/background.mp3"
 type = "audio"
 title = "riden-promo-bg"
+
+[[outputs]]
+id = "3CMSJZ4K-aktuNjIZs4tR"
+uri = "file://artifacts/riden-promo-video/public/audio/narration.mp3"
+type = "audio"
+title = "riden-narration"
+
+[[outputs]]
+id = "3SYcsA7o7tnCRb8uu1J1D"
+uri = "file://artifacts/riden-promo-video/public/audio/music.mp3"
+type = "audio"
+title = "riden-music"

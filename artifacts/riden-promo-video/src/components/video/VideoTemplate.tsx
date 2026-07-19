@@ -1,6 +1,7 @@
 import { useVideoPlayer } from '@/lib/video';
 import { AnimatePresence } from 'framer-motion';
 import { useEffect, useRef } from 'react';
+import { Download } from 'lucide-react';
 
 import { Scene1 } from './video_scenes/Scene1';
 import { Scene2 } from './video_scenes/Scene2';
@@ -43,9 +44,21 @@ export default function VideoTemplate() {
       {/* Background audio */}
       <audio
         ref={audioRef}
-        src={`${import.meta.env.BASE_URL}audio/background.mp3`}
+        src={`${import.meta.env.BASE_URL}audio/music.mp3`}
         preload="auto"
       />
+
+      {/* Download button */}
+      <a
+        href={`${import.meta.env.BASE_URL}videos/riden-promo-final.mp4`}
+        download="riden-promo.mp4"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-full text-sm font-bold font-body text-black"
+        style={{ background: 'linear-gradient(135deg, #FF8A00, #FFB300)' }}
+        dir="rtl"
+      >
+        <Download size={18} />
+        تحميل الفيديو
+      </a>
 
       {/* Persistent global texture overlay */}
       <div className="absolute inset-0 pointer-events-none z-50 mix-blend-overlay opacity-10">
