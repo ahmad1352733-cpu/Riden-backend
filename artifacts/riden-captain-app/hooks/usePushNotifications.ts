@@ -40,10 +40,8 @@ export function usePushNotifications(token: string | null) {
       navigate(router, data);
     });
 
-    // ─── حالة: التطبيق مفتوح أو في الخلفية (background) ───
-    notificationListener.current = Notifications.addNotificationReceivedListener(() => {
-      // يعرض الإشعار تلقائياً عبر setNotificationHandler
-    });
+    // ─── حالة: التطبيق مفتوح أو في الخلفية ───
+    notificationListener.current = Notifications.addNotificationReceivedListener(() => {});
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data as any;
@@ -105,23 +103,21 @@ async function registerForPush(authToken: string) {
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
-      await dbg('permission-request', { finalStatus });
     }
     if (finalStatus !== 'granted') {
       await dbg('permission-denied', { finalStatus });
       return;
     }
 
-    await dbg('getting-expo-token');
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: '40467eb7-0a19-4b65-9ea2-0e6be243882a',
-    });
-    await dbg('got-expo-token', { token: tokenData.data });
+    // ─── FCM token مباشرة (يتجاوز Expo Push Service) ───
+    await dbg('getting-device-token');
+    const deviceToken = await Notifications.getDevicePushTokenAsync();
+    await dbg('got-device-token', { token: deviceToken.data, type: deviceToken.type });
 
     const resp = await fetch(`${API}/users/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ token: tokenData.data }),
+      body: JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
     });
     await dbg('saved-token', { status: resp.status });
   } catch (e: any) {

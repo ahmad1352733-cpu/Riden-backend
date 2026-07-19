@@ -1,51 +1,11 @@
 /**
- * Expo Push Notifications helper
- * يرسل إشعارات حقيقية لأجهزة Expo عبر HTTP API
+ * FCM Push Notifications - يرسل مباشرة عبر Firebase Cloud Messaging
+ * يتجاوز Expo Push Service لتفادي مشكلة FCM credentials
  */
 
-export interface PushMessage {
-  to: string | string[];
-  title: string;
-  body: string;
-  data?: Record<string, unknown>;
-  sound?: "default" | null;
-  priority?: "default" | "normal" | "high";
-  channelId?: string;
-  badge?: number;
-  ttl?: number;
-  expiration?: number;
-  mutableContent?: boolean;
-}
+const FCM_SERVER_KEY = process.env.FIREBASE_SERVER_KEY ?? "";
+const FCM_URL = "https://fcm.googleapis.com/fcm/send";
 
-export async function sendPushNotifications(messages: PushMessage[]): Promise<void> {
-  if (messages.length === 0) return;
-
-  // نرسل كل رسالة منفردة لتجنب خطأ PUSH_TOO_MANY_EXPERIENCE_IDS
-  // (يحدث عند خلط توكنات من تطبيقات/حسابات Expo مختلفة في طلب واحد)
-  for (const message of messages) {
-    try {
-      console.log("[push] sending to token:", message.to);
-      const res = await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Accept": "application/json",
-          "Accept-Encoding": "gzip, deflate",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message),
-      });
-      const json = await res.json() as any;
-      console.log("[push] expo response:", JSON.stringify(json));
-      if (json?.data?.status === "error") {
-        console.error("[push] ticket error:", JSON.stringify(json.data));
-      }
-    } catch (e) {
-      console.error("[push] failed to send:", e);
-    }
-  }
-}
-
-/** يرسل إشعار واحد لتوكن واحد أو قائمة توكنز */
 export async function sendPush(
   tokens: (string | null | undefined)[],
   title: string,
@@ -53,22 +13,64 @@ export async function sendPush(
   data?: Record<string, unknown>,
   priority: "default" | "high" = "high",
 ): Promise<void> {
-  const valid = tokens.filter(t => t && t.startsWith("ExponentPushToken[")) as string[];
+  const valid = tokens.filter(
+    t => t && typeof t === "string" && t.length > 10
+  ) as string[];
   if (valid.length === 0) return;
 
+  if (!FCM_SERVER_KEY) {
+    console.error("[push] FIREBASE_SERVER_KEY غير مضبوط — لا يمكن إرسال الإشعارات");
+    return;
+  }
+
   const channelId = (data?.channelId as string) ?? "general";
-  await sendPushNotifications(
-    valid.map(to => ({
-      to,
-      title,
-      body,
-      sound: "default",
-      priority,
-      channelId,
-      badge: 1,
-      ttl: 86400,          // 24 ساعة — لا يُحذف لو الجهاز كان أوف
-      mutableContent: true,
-      data: { ...(data ?? {}), channelId },
-    }))
-  );
+
+  for (const token of valid) {
+    try {
+      console.log("[push] sending FCM to token:", token.slice(0, 20) + "...");
+      const res = await fetch(FCM_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `key=${FCM_SERVER_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          to: token,
+          priority: priority === "high" ? "high" : "normal",
+          notification: {
+            title,
+            body,
+            sound: "default",
+            android_channel_id: channelId,
+            click_action: "FLUTTER_NOTIFICATION_CLICK",
+          },
+          data: {
+            ...(data ?? {}),
+            channelId,
+            title,
+            body,
+          },
+          android: {
+            priority: "high",
+            notification: {
+              channel_id: channelId,
+              notification_priority: "PRIORITY_MAX",
+              sound: "default",
+              default_vibrate_timings: true,
+            },
+          },
+        }),
+      });
+      const json = await res.json() as any;
+      console.log("[push] FCM response:", JSON.stringify(json));
+      if (json?.failure > 0) {
+        console.error("[push] FCM delivery failed:", JSON.stringify(json?.results));
+      }
+    } catch (e) {
+      console.error("[push] FCM send error:", e);
+    }
+  }
 }
+
+// للتوافق مع أي استخدام قديم
+export { sendPush as sendPushNotifications };

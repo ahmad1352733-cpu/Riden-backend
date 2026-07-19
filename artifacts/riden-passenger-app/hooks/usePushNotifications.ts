@@ -31,14 +31,12 @@ export function usePushNotifications(token: string | null) {
     if (!token) return;
     registerForPush(token);
 
-    // ─── التطبيق كان مغلقاً (killed) ───
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return;
       const data = response.notification.request.content.data as any;
       navigate(router, data);
     });
 
-    // ─── التطبيق في الخلفية أو مفتوح ───
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data as any;
       navigate(router, data);
@@ -90,28 +88,25 @@ async function registerForPush(authToken: string) {
     }
 
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    await dbg('permission-check', { existingStatus });
     let finalStatus = existingStatus;
     if (existingStatus !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
-      await dbg('permission-request', { finalStatus });
     }
     if (finalStatus !== 'granted') {
       await dbg('permission-denied', { finalStatus });
       return;
     }
 
-    await dbg('getting-expo-token');
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: 'e61ec069-a95a-4dca-b555-b0c68a3aca59',
-    });
-    await dbg('got-expo-token', { token: tokenData.data });
+    // ─── FCM token مباشرة (يتجاوز Expo Push Service) ───
+    await dbg('getting-device-token');
+    const deviceToken = await Notifications.getDevicePushTokenAsync();
+    await dbg('got-device-token', { token: deviceToken.data, type: deviceToken.type });
 
     const resp = await fetch(`${API}/users/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ token: tokenData.data }),
+      body: JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
     });
     await dbg('saved-token', { status: resp.status });
   } catch (e: any) {
