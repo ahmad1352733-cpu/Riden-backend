@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { notificationsTable, usersTable } from "@workspace/db/schema";
-import { eq, desc, or, isNull } from "drizzle-orm";
+import { eq, desc, or, and, gte } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { sendPush } from "../lib/push";
 
@@ -12,15 +12,30 @@ router.get("/notifications", requireAuth, async (req, res) => {
   const userId = req.userId!;
   const role = req.userRole!;
 
-  // الإشعارات الخاصة بالمستخدم + البث العام المناسب له
+  // جلب تاريخ تسجيل المستخدم
+  const [user] = await db
+    .select({ createdAt: usersTable.createdAt })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+
+  const registeredAt = user?.createdAt ?? new Date(0);
+  const broadcastTarget = role === "captain" ? "captains" : "passengers";
+
+  // الإشعارات الشخصية المباشرة تظهر دائماً
+  // الإشعارات العامة (all / captains / passengers) تظهر فقط إذا أُرسلت بعد تسجيل المستخدم
   const rows = await db
     .select()
     .from(notificationsTable)
     .where(
       or(
         eq(notificationsTable.userId, userId),
-        eq(notificationsTable.target, "all"),
-        eq(notificationsTable.target, role === "captain" ? "captains" : "passengers"),
+        and(
+          or(
+            eq(notificationsTable.target, "all"),
+            eq(notificationsTable.target, broadcastTarget),
+          ),
+          gte(notificationsTable.createdAt, registeredAt),
+        ),
       )
     )
     .orderBy(desc(notificationsTable.createdAt))
