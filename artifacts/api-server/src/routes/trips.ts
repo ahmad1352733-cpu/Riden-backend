@@ -255,6 +255,40 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     .where(and(eq(tripsTable.id, trip.id), eq(tripsTable.status, "pending")))
     .returning();
 
+  // أبلغ الكباتن الآخرين أن الرحلة اتقبلت — يمسحونها فوراً
+  const otherRequests = await db
+    .select({ captainId: tripRequestsTable.captainId })
+    .from(tripRequestsTable)
+    .where(and(
+      eq(tripRequestsTable.tripId, id),
+      // استثني الكابتن اللي قبل
+    ));
+  const otherCaptainIds = otherRequests
+    .map(r => r.captainId)
+    .filter(cid => cid !== captainData.captain.id);
+
+  if (otherCaptainIds.length > 0) {
+    const otherCaptains = await db
+      .select({ userId: captainsTable.userId })
+      .from(captainsTable)
+      .where(or(...otherCaptainIds.map(cid => eq(captainsTable.id, cid))));
+    const otherUserIds = otherCaptains.map(c => c.userId);
+    const otherUsers = await db
+      .select({ pushToken: usersTable.pushToken })
+      .from(usersTable)
+      .where(or(...otherUserIds.map(uid => eq(usersTable.id, uid))));
+    const otherTokens = otherUsers.map(u => u.pushToken).filter(Boolean) as string[];
+    if (otherTokens.length > 0) {
+      await sendPush(
+        otherTokens,
+        "الرحلة اتقبلت",
+        "قبل كابتن آخر هذه الرحلة",
+        { type: "trip-taken", tripId: String(id), channelId: "general" },
+        "high",
+      );
+    }
+  }
+
   res.json(await buildTripResponse(updated));
 });
 

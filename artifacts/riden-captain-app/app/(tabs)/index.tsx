@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator,
   Platform, Linking, ScrollView,
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import * as Location from 'expo-location';
 import { startForegroundService, stopForegroundService } from '@/tasks/backgroundTripTask';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -183,6 +184,17 @@ export default function DashboardScreen() {
         );
       } catch { /* ignore */ }
     })();
+  }, []);
+
+  // ─── إذا قبل كابتن آخر الرحلة — امسحها فوراً ────────────────────────────
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(notification => {
+      const data = notification.request.content.data as any;
+      if (data?.type === 'trip-taken') {
+        qc.setQueryData(['getCaptainPendingTrip'], null);
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
