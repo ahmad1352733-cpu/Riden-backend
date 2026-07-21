@@ -31,7 +31,7 @@ try {
       const token = await AsyncStorage.getItem('riden_token');
       if (!token) return;
 
-      const res = await fetch(`${base}/captains/pending-trip`, {
+      const res = await fetch(`${base}/captains/me/pending-trip`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
