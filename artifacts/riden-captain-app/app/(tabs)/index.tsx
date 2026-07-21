@@ -167,17 +167,12 @@ export default function DashboardScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') return;
-        // آخر موقع محفوظ فوراً
+        // آخر موقع محفوظ فوراً — الخريطة تتمركز بدون انتظار
         const last = await Location.getLastKnownPositionAsync({});
         if (last) setCaptainLoc({ lat: last.coords.latitude, lng: last.coords.longitude });
-        // تحديث مستمر حتى نحصل على موقع دقيق
-        const sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, distanceInterval: 0, timeInterval: 1000 },
-          (loc) => {
-            setCaptainLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-            sub.remove(); // نوقف بعد أول موقع دقيق
-          },
-        );
+        // تحديث بالموقع الدقيق في الخلفية
+        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setCaptainLoc({ lat: fresh.coords.latitude, lng: fresh.coords.longitude });
       } catch { /* ignore */ }
     })();
   }, []);
