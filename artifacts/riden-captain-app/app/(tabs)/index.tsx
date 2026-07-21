@@ -166,14 +166,19 @@ export default function DashboardScreen() {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-        // آخر موقع محفوظ فوراً — الخريطة تتمركز بدون انتظار
+        if (status !== 'granted') {
+          Alert.alert('GPS', 'الإذن: ' + status);
+          return;
+        }
         const last = await Location.getLastKnownPositionAsync({});
+        Alert.alert('GPS', `آخر موقع: ${last ? `${last.coords.latitude.toFixed(4)}, ${last.coords.longitude.toFixed(4)}` : 'لا يوجد'}`);
         if (last) setCaptainLoc({ lat: last.coords.latitude, lng: last.coords.longitude });
-        // تحديث بالموقع الدقيق في الخلفية
-        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, timeInterval: 10000 });
+        Alert.alert('GPS', `موقع جديد: ${fresh.coords.latitude.toFixed(4)}, ${fresh.coords.longitude.toFixed(4)}`);
         setCaptainLoc({ lat: fresh.coords.latitude, lng: fresh.coords.longitude });
-      } catch { /* ignore */ }
+      } catch (e: any) {
+        Alert.alert('GPS خطأ', String(e?.message ?? e));
+      }
     })();
   }, []);
 
