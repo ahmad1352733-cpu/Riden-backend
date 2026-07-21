@@ -26,7 +26,7 @@ import { SplashLoadingScreen } from '@/components/SplashLoadingScreen';
 // تسجيل الـ background task عند تحميل التطبيق (يجب أن يكون قبل أي navigator)
 import '@/tasks/backgroundTripTask';
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN || 'riden-api-production.up.railway.app'}`);
+setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN || 'jordan-ride-connect.replit.app'}`);
 
 SplashScreen.preventAutoHideAsync();
 
