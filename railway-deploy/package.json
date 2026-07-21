@@ -1,0 +1,9 @@
+{
+  "name": "riden-api",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --enable-source-maps ./dist/index.mjs"
+  }
+}
+# Tue Jul 21 09:35:21 AM UTC 2026

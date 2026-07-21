@@ -9,7 +9,7 @@ import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-const API = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}/api`;
+const API = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'riden-api-production.up.railway.app'}/api`;
 
 export default function NotificationsScreen() {
   const colors = useColors();

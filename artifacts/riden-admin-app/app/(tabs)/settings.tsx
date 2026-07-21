@@ -46,7 +46,7 @@ export default function SettingsScreen() {
   const [pricingLoading, setPricingLoading] = useState(true);
   const [pricingSaving,  setPricingSaving]  = useState(false);
 
-  const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+  const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'riden-api-production.up.railway.app'}`;
 
   useEffect(() => {
     (async () => {

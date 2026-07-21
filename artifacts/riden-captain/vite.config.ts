@@ -74,7 +74,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: 'https://riden-api-production.up.railway.app',
         changeOrigin: true,
       },
     },

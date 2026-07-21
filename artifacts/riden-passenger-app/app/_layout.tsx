@@ -24,7 +24,7 @@ import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { SplashLoadingScreen } from '@/components/SplashLoadingScreen';
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}`);
+setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'riden-api-production.up.railway.app'}`);
 
 SplashScreen.preventAutoHideAsync();
 

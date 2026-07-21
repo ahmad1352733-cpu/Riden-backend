@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+artifacts/*/src
+artifacts/*/public
+artifacts/riden-admin
+artifacts/riden-captain
+artifacts/riden-passenger
+artifacts/riden-admin-app
+artifacts/riden-captain-app
+artifacts/riden-passenger-app
+artifacts/riden-promo-video
+artifacts/mockup-sandbox
+lib
+attached_assets
+.git
+*.log

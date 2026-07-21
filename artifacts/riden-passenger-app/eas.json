@@ -12,7 +12,7 @@
         "gradleCommand": ":app:assembleRelease"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "jordan-ride-connect.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "riden-api-production.up.railway.app"
       }
     },
     "production": {
@@ -21,7 +21,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "jordan-ride-connect.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "riden-api-production.up.railway.app"
       }
     }
   }

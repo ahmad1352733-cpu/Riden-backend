@@ -9,7 +9,7 @@ import { useColors } from '@/hooks/useColors';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+const baseUrl = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'riden-api-production.up.railway.app'}`;
 
 const getToken = async () => AsyncStorage.getItem('riden_admin_token');
 
