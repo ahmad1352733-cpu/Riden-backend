@@ -107,9 +107,13 @@ export default function DashboardScreen() {
   const rejectMutation = useRejectTrip({
     mutation: {
       onSuccess: () => {
+        qc.setQueryData(['getCaptainPendingTrip'], null);
         qc.invalidateQueries({ queryKey: ['getCaptainPendingTrip'] });
       },
-      onError: () => Alert.alert('خطأ', 'تعذّر رفض الرحلة'),
+      onError: () => {
+        // حتى لو فشل السيرفر، نخفي الرحلة محلياً
+        qc.setQueryData(['getCaptainPendingTrip'], null);
+      },
     },
   });
 
