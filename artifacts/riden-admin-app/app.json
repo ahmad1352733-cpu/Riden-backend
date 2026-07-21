@@ -2,7 +2,7 @@
   "expo": {
     "name": "RIDEN Admin",
     "slug": "riden-admin-app",
-    "owner": "farah_hammad",
+    "owner": "farah_kh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,7 +13,7 @@
       "policy": "appVersion"
     },
     "updates": {
-      "url": "https://u.expo.dev/bc76ff3e-708a-408b-bf59-bf9afdb69f08",
+      "url": "https://u.expo.dev/2e22b273-69c7-434d-8f1b-8e29d4c85c16",
       "enabled": true,
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
@@ -63,7 +63,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "bc76ff3e-708a-408b-bf59-bf9afdb69f08"
+        "projectId": "2e22b273-69c7-434d-8f1b-8e29d4c85c16"
       }
     }
   }
