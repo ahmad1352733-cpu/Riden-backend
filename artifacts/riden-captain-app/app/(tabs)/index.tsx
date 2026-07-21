@@ -166,19 +166,22 @@ export default function DashboardScreen() {
     (async () => {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          Alert.alert('GPS', 'الإذن: ' + status);
-          return;
-        }
+        if (status !== 'granted') return;
+        // آخر موقع محفوظ فوراً إن وُجد
         const last = await Location.getLastKnownPositionAsync({});
-        Alert.alert('GPS', `آخر موقع: ${last ? `${last.coords.latitude.toFixed(4)}, ${last.coords.longitude.toFixed(4)}` : 'لا يوجد'}`);
         if (last) setCaptainLoc({ lat: last.coords.latitude, lng: last.coords.longitude });
-        const fresh = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced, timeInterval: 10000 });
-        Alert.alert('GPS', `موقع جديد: ${fresh.coords.latitude.toFixed(4)}, ${fresh.coords.longitude.toFixed(4)}`);
-        setCaptainLoc({ lat: fresh.coords.latitude, lng: fresh.coords.longitude });
-      } catch (e: any) {
-        Alert.alert('GPS خطأ', String(e?.message ?? e));
-      }
+        // نراقب الموقع ونوقف بعد أول قراءة — أسرع من getCurrentPositionAsync
+        let firstFix = false;
+        const sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, distanceInterval: 0, timeInterval: 500 },
+          (loc) => {
+            if (firstFix) return;
+            firstFix = true;
+            setCaptainLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+            sub.remove();
+          },
+        );
+      } catch { /* ignore */ }
     })();
   }, []);
 
