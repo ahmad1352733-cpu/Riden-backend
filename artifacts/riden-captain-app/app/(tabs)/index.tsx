@@ -26,6 +26,7 @@ import {
   useGetCaptainTrips,
   useGetTripTracking,
   useAcceptTrip,
+  useRejectTrip,
   useStartTrip,
   useCompleteTrip,
 } from '@workspace/api-client-react';
@@ -100,6 +101,15 @@ export default function DashboardScreen() {
         Alert.alert('✓ تم القبول', 'توجّه لموقع الراكب الآن.');
       },
       onError: () => Alert.alert('خطأ', 'لم يتم القبول، ربما قَبِلها كابتن آخر.'),
+    },
+  });
+
+  const rejectMutation = useRejectTrip({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ['getCaptainPendingTrip'] });
+      },
+      onError: () => Alert.alert('خطأ', 'تعذّر رفض الرحلة'),
     },
   });
 
@@ -380,15 +390,26 @@ export default function DashboardScreen() {
               <Feather name="map-pin" size={11} color={colors.destructive} />
               <Text style={s.routeText} numberOfLines={1}>{(pendingTrip as any).dropoffAddress}</Text>
             </View>
-            <TouchableOpacity
-              style={s.primaryBtn}
-              onPress={() => acceptMutation.mutate({ id: (pendingTrip as any).id })}
-              disabled={acceptMutation.isPending}
-            >
-              {acceptMutation.isPending
-                ? <ActivityIndicator color={colors.primaryForeground} />
-                : <><Feather name="check" size={17} color={colors.primaryForeground} /><Text style={s.primaryBtnTxt}>قبول الرحلة</Text></>}
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={[s.primaryBtn, { flex: 1, backgroundColor: colors.destructive }]}
+                onPress={() => rejectMutation.mutate({ id: (pendingTrip as any).id })}
+                disabled={rejectMutation.isPending || acceptMutation.isPending}
+              >
+                {rejectMutation.isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : <><Feather name="x" size={17} color="#fff" /><Text style={s.primaryBtnTxt}>رفض</Text></>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.primaryBtn, { flex: 2 }]}
+                onPress={() => acceptMutation.mutate({ id: (pendingTrip as any).id })}
+                disabled={acceptMutation.isPending || rejectMutation.isPending}
+              >
+                {acceptMutation.isPending
+                  ? <ActivityIndicator color={colors.primaryForeground} />
+                  : <><Feather name="check" size={17} color={colors.primaryForeground} /><Text style={s.primaryBtnTxt}>قبول الرحلة</Text></>}
+              </TouchableOpacity>
+            </View>
           </View>
         )}
 

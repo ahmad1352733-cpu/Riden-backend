@@ -258,6 +258,28 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
   res.json(await buildTripResponse(updated));
 });
 
+// ─── PATCH /api/trips/:id/reject ─────────────────────────────────────────────
+router.patch("/trips/:id/reject", requireAuth, async (req, res) => {
+  if (req.userRole !== "captain") { res.status(403).json({ error: "Captains only" }); return; }
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const captainData = await getCaptainByUserId(req.userId!);
+  if (!captainData) { res.status(403).json({ error: "Not found" }); return; }
+
+  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
+  if (!trip || trip.status !== "pending") {
+    res.status(400).json({ error: "Trip not available to reject" }); return;
+  }
+
+  // حذف طلب الرحلة لهذا الكابتن فقط حتى يُرسَل لكابتن آخر
+  await db
+    .delete(tripRequestsTable)
+    .where(and(eq(tripRequestsTable.tripId, id), eq(tripRequestsTable.captainId, captainData.captain.id)));
+
+  res.json({ success: true });
+});
+
 // ─── PATCH /api/trips/:id/start ──────────────────────────────────────────────
 router.patch("/trips/:id/start", requireAuth, async (req, res) => {
   if (req.userRole !== "captain") { res.status(403).json({ error: "Captains only" }); return; }

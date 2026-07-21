@@ -1563,6 +1563,41 @@ export const useAcceptTrip = <TError = ErrorType<unknown>,
       return useMutation(getAcceptTripMutationOptions(options));
     }
 
+export const getRejectTripUrl = (id: number) => `/api/trips/${id}/reject`
+
+/**
+ * @summary Captain rejects a trip
+ */
+export const rejectTrip = async (id: number, options?: RequestInit): Promise<{ success: boolean }> =>
+  customFetch<{ success: boolean }>(getRejectTripUrl(id), { ...options, method: 'PATCH' })
+
+export const getRejectTripMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof rejectTrip>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof rejectTrip>>, TError, { id: number }, TContext> => {
+  const mutationKey = ['rejectTrip'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof rejectTrip>>, { id: number }> = (props) => {
+    const { id } = props ?? {};
+    return rejectTrip(id, requestOptions);
+  };
+  return { mutationFn, ...mutationOptions };
+}
+
+export type RejectTripMutationResult = NonNullable<Awaited<ReturnType<typeof rejectTrip>>>
+export type RejectTripMutationError = ErrorType<unknown>
+
+/**
+ * @summary Captain rejects a trip
+ */
+export const useRejectTrip = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof rejectTrip>>, TError, { id: number }, TContext>, request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<Awaited<ReturnType<typeof rejectTrip>>, TError, { id: number }, TContext> =>
+  useMutation(getRejectTripMutationOptions(options));
+
 export const getStartTripUrl = (id: number,) => {
 
 
