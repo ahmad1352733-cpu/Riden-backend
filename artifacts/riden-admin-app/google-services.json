@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:147325378327:android:a2037007dd7e50d7e8e152",
+        "mobilesdk_app_id": "1:147325378327:android:781eb67b1f719a0fe8e152",
         "android_client_info": {
-          "package_name": "jo.riden.captain"
+          "package_name": "jo.riden.admin"
         }
       },
       "oauth_client": [],

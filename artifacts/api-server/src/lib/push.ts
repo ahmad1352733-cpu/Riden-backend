@@ -4,7 +4,7 @@
  */
 import { GoogleAuth } from "google-auth-library";
 
-const PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? "riden-be20b";
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID ?? "riden2";
 const FCM_V1_URL = `https://fcm.googleapis.com/v1/projects/${PROJECT_ID}/messages:send`;
 
 let auth: GoogleAuth | null = null;

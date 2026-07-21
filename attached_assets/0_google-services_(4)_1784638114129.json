@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:147325378327:android:781eb67b1f719a0fe8e152",
+        "android_client_info": {
+          "package_name": "jo.riden.admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBxweTIA1XlSih8zfCcSXy_iXBr0UmzHeo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:147325378327:android:9f396f1f77937346e8e152",
         "android_client_info": {
           "package_name": "jo.riden.passenger"

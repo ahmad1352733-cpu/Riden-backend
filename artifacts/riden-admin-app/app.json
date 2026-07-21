@@ -28,6 +28,7 @@
     },
     "android": {
       "package": "jo.riden.admin",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#0A1628"
@@ -45,7 +46,16 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#0A1628",
+          "defaultChannel": "general",
+          "sounds": []
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
