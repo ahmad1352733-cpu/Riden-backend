@@ -23,7 +23,7 @@ try {
   TaskManager.defineTask(BACKGROUND_LOCATION_TASK, async ({ data, error }: any) => {
     if (error) return;
 
-    const domain = process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app';
+    const domain = process.env.EXPO_PUBLIC_DOMAIN || 'riden-api-production.up.railway.app';
     const base   = `https://${domain}/api`;
 
     try {

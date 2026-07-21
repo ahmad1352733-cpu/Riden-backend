@@ -3,7 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const API = `https://${process.env.EXPO_PUBLIC_DOMAIN ?? 'jordan-ride-connect.replit.app'}/api`;
+const API = `https://${process.env.EXPO_PUBLIC_DOMAIN || 'riden-api-production.up.railway.app'}/api`;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
