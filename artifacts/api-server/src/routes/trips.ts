@@ -289,7 +289,7 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Captain not approved" }); return;
   }
 
-  // Verify this captain was notified about this trip
+  // تأكد أن هذا الكابتن كان ضمن المدعوّين لهذه الرحلة
   const [request] = await db
     .select()
     .from(tripRequestsTable)
@@ -298,40 +298,60 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Trip not assigned to you" }); return;
   }
 
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
-  if (!trip || trip.status !== "pending") {
-    res.status(400).json({ error: "Trip not available" }); return;
+  // ── عملية ذرية: SELECT FOR UPDATE داخل Transaction لمنع القبول المزدوج ───
+  let updated: typeof tripsTable.$inferSelect | undefined;
+  try {
+    updated = await db.transaction(async (tx) => {
+      // قفل الصف — أي كابتن آخر يحاول نفس العملية سينتظر حتى تنتهي هذه
+      const [current] = await tx
+        .select()
+        .from(tripsTable)
+        .where(eq(tripsTable.id, id))
+        .for("update");
+
+      if (!current || current.status !== "pending") {
+        throw new Error("TRIP_TAKEN");
+      }
+
+      const [row] = await tx
+        .update(tripsTable)
+        .set({ status: "accepted", captainId: captainData.captain.id })
+        .where(and(eq(tripsTable.id, id), eq(tripsTable.status, "pending")))
+        .returning();
+
+      if (!row) throw new Error("TRIP_TAKEN");
+      return row;
+    });
+  } catch (e: any) {
+    if (e.message === "TRIP_TAKEN") {
+      res.status(409).json({ error: "Trip already accepted by another captain" });
+      return;
+    }
+    throw e;
   }
 
-  const [updated] = await db
-    .update(tripsTable)
-    .set({ status: "accepted", captainId: captainData.captain.id })
-    .where(and(eq(tripsTable.id, trip.id), eq(tripsTable.status, "pending")))
-    .returning();
+  const captainName = captainData.user?.name ?? "الكابتن";
 
-  // أبلغ الراكب أن رحلته اتقبلت
+  // ── إشعار الراكب مع اسم الكابتن ──────────────────────────────────────────
   const [passengerUser] = await db
     .select({ pushToken: usersTable.pushToken })
     .from(usersTable)
-    .where(eq(usersTable.id, trip.passengerId));
+    .where(eq(usersTable.id, updated.passengerId));
   if (passengerUser?.pushToken) {
     await sendPush(
       [passengerUser.pushToken],
       "✅ تم قبول رحلتك!",
-      "كابتن في طريقه إليك الآن",
+      `الكابتن ${captainName} في طريقه إليك الآن`,
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high",
     );
   }
 
-  // أبلغ الكباتن الآخرين أن الرحلة اتقبلت — يمسحونها فوراً
+  // ── إشعار الكباتن الآخرين بأن الرحلة قُبلت — يُزيلونها فوراً ───────────
   const otherRequests = await db
     .select({ captainId: tripRequestsTable.captainId })
     .from(tripRequestsTable)
-    .where(and(
-      eq(tripRequestsTable.tripId, id),
-      // استثني الكابتن اللي قبل
-    ));
+    .where(eq(tripRequestsTable.tripId, id));
   const otherCaptainIds = otherRequests
     .map(r => r.captainId)
     .filter(cid => cid !== captainData.captain.id);
@@ -350,9 +370,9 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     if (otherTokens.length > 0) {
       await sendPush(
         otherTokens,
-        "الرحلة اتقبلت",
-        "قبل كابتن آخر هذه الرحلة",
-        { type: "trip-taken", tripId: String(id), channelId: "general" },
+        "❌ تم قبول الرحلة من سائق آخر",
+        `قبل الكابتن ${captainName} هذه الرحلة`,
+        { type: "trip-taken", tripId: String(id), channelId: "trip-requests" },
         "high",
       );
     }
@@ -411,8 +431,8 @@ router.patch("/trips/:id/start", requireAuth, async (req, res) => {
   if (startPassenger?.pushToken) {
     await sendPush(
       [startPassenger.pushToken],
-      "🚗 انطلقت رحلتك!",
-      "الكابتن بدأ الرحلة الآن",
+      "بدأت رحلتك 🚗",
+      "الكابتن انطلق بك الآن — استمتع بالرحلة!",
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high",
     );

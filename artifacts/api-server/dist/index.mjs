@@ -71051,26 +71051,36 @@ router4.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Trip not assigned to you" });
     return;
   }
-  const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
-  if (!trip || trip.status !== "pending") {
-    res.status(400).json({ error: "Trip not available" });
-    return;
+  let updated;
+  try {
+    updated = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(tripsTable).where(eq(tripsTable.id, id)).for("update");
+      if (!current || current.status !== "pending") {
+        throw new Error("TRIP_TAKEN");
+      }
+      const [row] = await tx.update(tripsTable).set({ status: "accepted", captainId: captainData.captain.id }).where(and(eq(tripsTable.id, id), eq(tripsTable.status, "pending"))).returning();
+      if (!row) throw new Error("TRIP_TAKEN");
+      return row;
+    });
+  } catch (e2) {
+    if (e2.message === "TRIP_TAKEN") {
+      res.status(409).json({ error: "Trip already accepted by another captain" });
+      return;
+    }
+    throw e2;
   }
-  const [updated] = await db.update(tripsTable).set({ status: "accepted", captainId: captainData.captain.id }).where(and(eq(tripsTable.id, trip.id), eq(tripsTable.status, "pending"))).returning();
-  const [passengerUser] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, trip.passengerId));
+  const captainName = captainData.user?.name ?? "\u0627\u0644\u0643\u0627\u0628\u062A\u0646";
+  const [passengerUser] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, updated.passengerId));
   if (passengerUser?.pushToken) {
     await sendPush(
       [passengerUser.pushToken],
       "\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644 \u0631\u062D\u0644\u062A\u0643!",
-      "\u0643\u0627\u0628\u062A\u0646 \u0641\u064A \u0637\u0631\u064A\u0642\u0647 \u0625\u0644\u064A\u0643 \u0627\u0644\u0622\u0646",
+      `\u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0641\u064A \u0637\u0631\u064A\u0642\u0647 \u0625\u0644\u064A\u0643 \u0627\u0644\u0622\u0646`,
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high"
     );
   }
-  const otherRequests = await db.select({ captainId: tripRequestsTable.captainId }).from(tripRequestsTable).where(and(
-    eq(tripRequestsTable.tripId, id)
-    // استثني الكابتن اللي قبل
-  ));
+  const otherRequests = await db.select({ captainId: tripRequestsTable.captainId }).from(tripRequestsTable).where(eq(tripRequestsTable.tripId, id));
   const otherCaptainIds = otherRequests.map((r2) => r2.captainId).filter((cid) => cid !== captainData.captain.id);
   if (otherCaptainIds.length > 0) {
     const otherCaptains = await db.select({ userId: captainsTable.userId }).from(captainsTable).where(or(...otherCaptainIds.map((cid) => eq(captainsTable.id, cid))));
@@ -71080,9 +71090,9 @@ router4.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     if (otherTokens.length > 0) {
       await sendPush(
         otherTokens,
-        "\u0627\u0644\u0631\u062D\u0644\u0629 \u0627\u062A\u0642\u0628\u0644\u062A",
-        "\u0642\u0628\u0644 \u0643\u0627\u0628\u062A\u0646 \u0622\u062E\u0631 \u0647\u0630\u0647 \u0627\u0644\u0631\u062D\u0644\u0629",
-        { type: "trip-taken", tripId: String(id), channelId: "general" },
+        "\u274C \u062A\u0645 \u0642\u0628\u0648\u0644 \u0627\u0644\u0631\u062D\u0644\u0629 \u0645\u0646 \u0633\u0627\u0626\u0642 \u0622\u062E\u0631",
+        `\u0642\u0628\u0644 \u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0647\u0630\u0647 \u0627\u0644\u0631\u062D\u0644\u0629`,
+        { type: "trip-taken", tripId: String(id), channelId: "trip-requests" },
         "high"
       );
     }
@@ -71137,8 +71147,8 @@ router4.patch("/trips/:id/start", requireAuth, async (req, res) => {
   if (startPassenger?.pushToken) {
     await sendPush(
       [startPassenger.pushToken],
-      "\u{1F697} \u0627\u0646\u0637\u0644\u0642\u062A \u0631\u062D\u0644\u062A\u0643!",
-      "\u0627\u0644\u0643\u0627\u0628\u062A\u0646 \u0628\u062F\u0623 \u0627\u0644\u0631\u062D\u0644\u0629 \u0627\u0644\u0622\u0646",
+      "\u0628\u062F\u0623\u062A \u0631\u062D\u0644\u062A\u0643 \u{1F697}",
+      "\u0627\u0644\u0643\u0627\u0628\u062A\u0646 \u0627\u0646\u0637\u0644\u0642 \u0628\u0643 \u0627\u0644\u0622\u0646 \u2014 \u0627\u0633\u062A\u0645\u062A\u0639 \u0628\u0627\u0644\u0631\u062D\u0644\u0629!",
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high"
     );

@@ -186,15 +186,26 @@ export default function DashboardScreen() {
     })();
   }, []);
 
-  // ─── إذا قبل كابتن آخر الرحلة — امسحها فوراً ────────────────────────────
+  // ─── إذا قبل كابتن آخر الرحلة — امسحها فوراً وأبلغ الكابتن ────────────
   useEffect(() => {
-    const sub = Notifications.addNotificationReceivedListener(notification => {
+    // استقبال الإشعار والتطبيق في المقدمة
+    const receivedSub = Notifications.addNotificationReceivedListener(notification => {
       const data = notification.request.content.data as any;
       if (data?.type === 'trip-taken') {
         qc.setQueryData(['getCaptainPendingTrip'], null);
+        qc.invalidateQueries({ queryKey: ['getCaptainPendingTrip'] });
+        Alert.alert('❌ تم قبول الرحلة من سائق آخر', 'ستصلك رحلة جديدة قريباً.');
       }
     });
-    return () => sub.remove();
+    // النقر على الإشعار والتطبيق في الخلفية أو مغلق
+    const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as any;
+      if (data?.type === 'trip-taken') {
+        qc.setQueryData(['getCaptainPendingTrip'], null);
+        qc.invalidateQueries({ queryKey: ['getCaptainPendingTrip'] });
+      }
+    });
+    return () => { receivedSub.remove(); responseSub.remove(); };
   }, []);
 
   useEffect(() => {
