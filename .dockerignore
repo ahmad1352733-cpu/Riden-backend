@@ -1,7 +1,7 @@
 node_modules
 **/node_modules
-artifacts/*/src
-artifacts/*/public
+
+# Exclude other artifacts (not needed for api-server)
 artifacts/riden-admin
 artifacts/riden-captain
 artifacts/riden-passenger
@@ -10,7 +10,15 @@ artifacts/riden-captain-app
 artifacts/riden-passenger-app
 artifacts/riden-promo-video
 artifacts/mockup-sandbox
-lib
+
+# Exclude pre-built dist (we build from source now)
+artifacts/api-server/dist
+
+# Exclude lib packages not needed by api-server
+lib/api-client-react
+lib/api-spec
+
+# Misc
 attached_assets
 .git
 *.log
