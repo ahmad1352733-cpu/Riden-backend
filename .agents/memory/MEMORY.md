@@ -4,3 +4,4 @@
 - [EAS Build Quota & FCM Setup](eas-fcm-setup.md) — free plan builds exhausted mid-month; FCM needs Firebase + rebuild; foreground service needs expo-task-manager rebuild
 - [FCM Migration Lesson](fcm-migration-lesson.md) — always keep same Firebase project when migrating; switching projects breaks FCM for existing APKs until reinstall
 - [FCM Push Resolution](fcm-push-resolution.md) — use google-auth-library for FCM v1; manual JWT fails with unsupported_grant_type
+- [FCM Delivery Confirmed](fcm-delivery-confirmed.md) — FCM returns success=1 for passenger notifications; issue is device-side (channel/battery/settings), not backend
