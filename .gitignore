@@ -47,3 +47,5 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+attached_assets/0_riden2-firebase-adminsdk-fbsvc-*.json
+artifacts/api-server/src/firebase-service-account.json

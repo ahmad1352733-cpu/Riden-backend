@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 
-const API = `https://${process.env.EXPO_PUBLIC_DOMAIN || 'riden-api-production.up.railway.app'}/api`;
+// ثابت: عنوان السيرفر الإنتاجي
+const API = 'https://riden-api-production.up.railway.app/api';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -16,11 +17,14 @@ Notifications.setNotificationHandler({
 });
 
 function navigate(router: ReturnType<typeof useRouter>, data: any) {
-  if (data?.screen === 'notifications') {
-    router.replace('/(tabs)/notifications');
-  } else if (data?.screen === 'trip-update') {
-    router.replace('/(tabs)');
-  }
+  if (!data) return;
+  setTimeout(() => {
+    if (data?.screen === 'notifications') {
+      router.replace('/(tabs)/notifications');
+    } else if (data?.screen === 'trip-update') {
+      router.replace('/(tabs)');
+    }
+  }, 500);
 }
 
 export function usePushNotifications(token: string | null) {
@@ -29,37 +33,32 @@ export function usePushNotifications(token: string | null) {
 
   useEffect(() => {
     if (!token) return;
+
     registerForPush(token);
+
+    // أعد التسجيل في كل مرة يرجع التطبيق للـ foreground
+    const appStateSub = AppState.addEventListener('change', state => {
+      if (state === 'active') registerForPush(token);
+    });
 
     Notifications.getLastNotificationResponseAsync().then(response => {
       if (!response) return;
-      const data = response.notification.request.content.data as any;
-      navigate(router, data);
+      navigate(router, response.notification.request.content.data);
     });
 
     responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as any;
-      navigate(router, data);
+      navigate(router, response.notification.request.content.data);
     });
 
-    return () => { responseListener.current?.remove(); };
+    return () => {
+      appStateSub.remove();
+      responseListener.current?.remove();
+    };
   }, [token]);
-}
-
-async function dbg(step: string, data?: object) {
-  try {
-    await fetch(`${API}/debug/push-log`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ step, data }),
-    });
-  } catch {}
 }
 
 async function registerForPush(authToken: string) {
   try {
-    await dbg('start', { platform: Platform.OS });
-
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('general', {
         name: 'الإشعارات العامة',
@@ -93,24 +92,23 @@ async function registerForPush(authToken: string) {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== 'granted') {
-      await dbg('permission-denied', { finalStatus });
-      return;
-    }
+    if (finalStatus !== 'granted') return;
 
-    // ─── FCM token مباشرة (يتجاوز Expo Push Service) ───
-    await dbg('getting-device-token');
+    // FCM token مباشرة
     const deviceToken = await Notifications.getDevicePushTokenAsync();
-    await dbg('got-device-token', { token: deviceToken.data, type: deviceToken.type });
 
     const resp = await fetch(`${API}/users/push-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
       body: JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
     });
-    await dbg('saved-token', { status: resp.status });
-  } catch (e: any) {
-    await dbg('error', { message: String(e?.message ?? e) });
+
+    if (resp.ok) {
+      console.log('[push] token registered ✓');
+    } else {
+      console.log('[push] token register failed:', resp.status);
+    }
+  } catch (e) {
     console.log('[push] register error:', e);
   }
 }
