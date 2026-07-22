@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, PermissionsAndroid } from 'react-native';
 import { useRouter } from 'expo-router';
 
-// ثابت: عنوان السيرفر الإنتاجي
+// Railway backend — ثابت لا يتغير بالـ OTA
 const API = 'https://riden-api-production.up.railway.app/api';
 
 // عرض الإشعارات حتى لو التطبيق مفتوح
@@ -20,31 +20,28 @@ Notifications.setNotificationHandler({
 function navigate(router: ReturnType<typeof useRouter>, data: any) {
   if (!data) return;
   setTimeout(() => {
-    if (data?.screen === 'trip-request') {
-      router.replace('/(tabs)');
-    } else if (data?.screen === 'notifications') {
-      router.replace('/(tabs)/notifications');
-    }
+    if (data?.screen === 'trip-request') router.replace('/(tabs)');
+    else if (data?.screen === 'notifications') router.replace('/(tabs)/notifications');
   }, 500);
 }
 
 export function usePushNotifications(token: string | null) {
   const router = useRouter();
   const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
-  const handled = useRef(false);
+  const responseListener     = useRef<Notifications.EventSubscription>();
+  const handled              = useRef(false);
 
   useEffect(() => {
     if (!token) return;
 
     registerForPush(token);
 
-    // أعد التسجيل في كل مرة يرجع التطبيق للـ foreground
+    // أعد التسجيل عند العودة للـ foreground
     const appStateSub = AppState.addEventListener('change', state => {
       if (state === 'active') registerForPush(token);
     });
 
-    // حالة: التطبيق كان مغلقاً والمستخدم ضغط الإشعار
+    // إشعار ضُغط عليه وهو في الخلفية
     if (!handled.current) {
       Notifications.getLastNotificationResponseAsync().then(response => {
         if (!response) return;
@@ -67,8 +64,22 @@ export function usePushNotifications(token: string | null) {
   }, [token]);
 }
 
+async function requestAndroid13Permission(): Promise<boolean> {
+  // Android 13+ (API 33+) يحتاج طلب POST_NOTIFICATIONS صريح
+  if (Platform.OS !== 'android' || (Platform.Version as number) < 33) return true;
+  try {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+    return result === PermissionsAndroid.RESULTS.GRANTED;
+  } catch {
+    return false;
+  }
+}
+
 async function registerForPush(authToken: string) {
   try {
+    // 1. إعداد notification channels (Android)
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('trip-requests', {
         name: 'طلبات الرحلات',
@@ -97,27 +108,41 @@ async function registerForPush(authToken: string) {
       });
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
+    // 2. طلب إذن Android 13+
+    const android13ok = await requestAndroid13Permission();
+    if (!android13ok) {
+      console.log('[push] POST_NOTIFICATIONS permission denied (Android 13+)');
+      return;
+    }
+
+    // 3. طلب إذن expo-notifications
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== 'granted') return;
+    if (finalStatus !== 'granted') {
+      console.log('[push] notification permission denied');
+      return;
+    }
 
-    // FCM token مباشرة
+    // 4. الحصول على FCM token مباشرة (getDevicePushTokenAsync)
     const deviceToken = await Notifications.getDevicePushTokenAsync();
+    console.log('[push] token type:', deviceToken.type, 'data:', String(deviceToken.data).slice(0, 30));
 
+    // 5. إرسال الـ token لـ Railway
     const resp = await fetch(`${API}/users/push-token`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
+      body:    JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
     });
 
     if (resp.ok) {
-      console.log('[push] token registered ✓');
+      console.log('[push] token registered ✓ to Railway');
     } else {
-      console.log('[push] token register failed:', resp.status);
+      const err = await resp.text();
+      console.log('[push] token register failed:', resp.status, err);
     }
   } catch (e) {
     console.log('[push] register error:', e);

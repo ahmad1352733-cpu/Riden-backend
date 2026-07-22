@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, PermissionsAndroid } from 'react-native';
 import { useRouter } from 'expo-router';
 
-// ثابت: عنوان السيرفر الإنتاجي
+// Railway backend — ثابت لا يتغير بالـ OTA
 const API = 'https://riden-api-production.up.railway.app/api';
 
 Notifications.setNotificationHandler({
@@ -19,16 +19,13 @@ Notifications.setNotificationHandler({
 function navigate(router: ReturnType<typeof useRouter>, data: any) {
   if (!data) return;
   setTimeout(() => {
-    if (data?.screen === 'notifications') {
-      router.replace('/(tabs)/notifications');
-    } else if (data?.screen === 'trip-update') {
-      router.replace('/(tabs)');
-    }
+    if (data?.screen === 'notifications') router.replace('/(tabs)/notifications');
+    else if (data?.screen === 'trip-update') router.replace('/(tabs)');
   }, 500);
 }
 
 export function usePushNotifications(token: string | null) {
-  const router = useRouter();
+  const router          = useRouter();
   const responseListener = useRef<Notifications.EventSubscription>();
 
   useEffect(() => {
@@ -36,7 +33,6 @@ export function usePushNotifications(token: string | null) {
 
     registerForPush(token);
 
-    // أعد التسجيل في كل مرة يرجع التطبيق للـ foreground
     const appStateSub = AppState.addEventListener('change', state => {
       if (state === 'active') registerForPush(token);
     });
@@ -55,6 +51,18 @@ export function usePushNotifications(token: string | null) {
       responseListener.current?.remove();
     };
   }, [token]);
+}
+
+async function requestAndroid13Permission(): Promise<boolean> {
+  if (Platform.OS !== 'android' || (Platform.Version as number) < 33) return true;
+  try {
+    const result = await PermissionsAndroid.request(
+      PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+    );
+    return result === PermissionsAndroid.RESULTS.GRANTED;
+  } catch {
+    return false;
+  }
 }
 
 async function registerForPush(authToken: string) {
@@ -86,27 +94,39 @@ async function registerForPush(authToken: string) {
       });
     }
 
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
+    // Android 13+
+    const android13ok = await requestAndroid13Permission();
+    if (!android13ok) {
+      console.log('[push] POST_NOTIFICATIONS permission denied (Android 13+)');
+      return;
+    }
+
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== 'granted') {
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
-    if (finalStatus !== 'granted') return;
+    if (finalStatus !== 'granted') {
+      console.log('[push] notification permission denied');
+      return;
+    }
 
     // FCM token مباشرة
     const deviceToken = await Notifications.getDevicePushTokenAsync();
+    console.log('[push] token type:', deviceToken.type, 'data:', String(deviceToken.data).slice(0, 30));
 
     const resp = await fetch(`${API}/users/push-token`, {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-      body: JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
+      body:    JSON.stringify({ token: deviceToken.data, type: deviceToken.type }),
     });
 
     if (resp.ok) {
-      console.log('[push] token registered ✓');
+      console.log('[push] token registered ✓ to Railway');
     } else {
-      console.log('[push] token register failed:', resp.status);
+      const err = await resp.text();
+      console.log('[push] token register failed:', resp.status, err);
     }
   } catch (e) {
     console.log('[push] register error:', e);
