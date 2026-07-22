@@ -221,6 +221,60 @@ router.patch("/trips/:id/cancel", requireAuth, async (req, res) => {
     .set({ status: "cancelled", cancellationReason: reason })
     .where(eq(tripsTable.id, trip.id))
     .returning();
+
+  // أبلغ الكابتن المعيّن (إن وجد) أن الراكب ألغى الرحلة
+  if (trip.captainId) {
+    const [captain] = await db
+      .select({ userId: captainsTable.userId })
+      .from(captainsTable)
+      .where(eq(captainsTable.id, trip.captainId));
+    if (captain) {
+      const [captainUser] = await db
+        .select({ pushToken: usersTable.pushToken })
+        .from(usersTable)
+        .where(eq(usersTable.id, captain.userId));
+      if (captainUser?.pushToken) {
+        await sendPush(
+          [captainUser.pushToken],
+          "❌ تم إلغاء الرحلة",
+          "قام الراكب بإلغاء الرحلة",
+          { screen: "trip-request", tripId: String(id), channelId: "trip-requests" },
+          "high",
+        );
+      }
+    }
+  } else {
+    // الرحلة لم تُقبل بعد — أبلغ الكباتن المرشّحين لها
+    const pendingRequests = await db
+      .select({ captainId: tripRequestsTable.captainId })
+      .from(tripRequestsTable)
+      .where(eq(tripRequestsTable.tripId, id));
+    if (pendingRequests.length > 0) {
+      const captainIds = pendingRequests.map(r => r.captainId);
+      const captainRecords = await db
+        .select({ userId: captainsTable.userId })
+        .from(captainsTable)
+        .where(or(...captainIds.map(cid => eq(captainsTable.id, cid))));
+      const userIds = captainRecords.map(c => c.userId);
+      if (userIds.length > 0) {
+        const users = await db
+          .select({ pushToken: usersTable.pushToken })
+          .from(usersTable)
+          .where(or(...userIds.map(uid => eq(usersTable.id, uid))));
+        const tokens = users.map(u => u.pushToken).filter(Boolean) as string[];
+        if (tokens.length > 0) {
+          await sendPush(
+            tokens,
+            "❌ ألغى الراكب الطلب",
+            "تم إلغاء طلب الرحلة من قِبل الراكب",
+            { type: "trip-cancelled", tripId: String(id), channelId: "trip-requests" },
+            "high",
+          );
+        }
+      }
+    }
+  }
+
   res.json(updated);
 });
 
@@ -254,6 +308,21 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     .set({ status: "accepted", captainId: captainData.captain.id })
     .where(and(eq(tripsTable.id, trip.id), eq(tripsTable.status, "pending")))
     .returning();
+
+  // أبلغ الراكب أن رحلته اتقبلت
+  const [passengerUser] = await db
+    .select({ pushToken: usersTable.pushToken })
+    .from(usersTable)
+    .where(eq(usersTable.id, trip.passengerId));
+  if (passengerUser?.pushToken) {
+    await sendPush(
+      [passengerUser.pushToken],
+      "✅ تم قبول رحلتك!",
+      "كابتن في طريقه إليك الآن",
+      { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
+      "high",
+    );
+  }
 
   // أبلغ الكباتن الآخرين أن الرحلة اتقبلت — يمسحونها فوراً
   const otherRequests = await db
@@ -334,6 +403,21 @@ router.patch("/trips/:id/start", requireAuth, async (req, res) => {
     .where(eq(tripsTable.id, trip.id))
     .returning();
 
+  // أبلغ الراكب أن الرحلة بدأت
+  const [startPassenger] = await db
+    .select({ pushToken: usersTable.pushToken })
+    .from(usersTable)
+    .where(eq(usersTable.id, trip.passengerId));
+  if (startPassenger?.pushToken) {
+    await sendPush(
+      [startPassenger.pushToken],
+      "🚗 انطلقت رحلتك!",
+      "الكابتن بدأ الرحلة الآن",
+      { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
+      "high",
+    );
+  }
+
   res.json(await buildTripResponse(updated));
 });
 
@@ -405,6 +489,21 @@ router.patch("/trips/:id/complete", requireAuth, async (req, res) => {
 
   // حذف نقاط GPS بعد حساب المسافة (تنظيف)
   await db.delete(tripGpsPointsTable).where(eq(tripGpsPointsTable.tripId, trip.id));
+
+  // أبلغ الراكب أن الرحلة اكتملت
+  const [completePassenger] = await db
+    .select({ pushToken: usersTable.pushToken })
+    .from(usersTable)
+    .where(eq(usersTable.id, trip.passengerId));
+  if (completePassenger?.pushToken) {
+    await sendPush(
+      [completePassenger.pushToken],
+      "🏁 اكتملت رحلتك",
+      `المسافة: ${distanceKm} كم — الأجرة: ${finalFare} د.أ`,
+      { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
+      "high",
+    );
+  }
 
   res.json(await buildTripResponse(updated));
 });
