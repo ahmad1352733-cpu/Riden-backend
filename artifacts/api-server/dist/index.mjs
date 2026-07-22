@@ -70723,6 +70723,7 @@ async function getFcmAccessToken() {
   return tokenRes.token;
 }
 async function sendViaExpoPush(tokens, title, body, data) {
+  const result = { successCount: 0, failureCount: 0, errors: [] };
   const messages = tokens.map((to) => ({
     to,
     title,
@@ -70742,22 +70743,34 @@ async function sendViaExpoPush(tokens, title, body, data) {
     const results = Array.isArray(json2.data) ? json2.data : [json2.data ?? json2];
     results.forEach((r2, i2) => {
       if (r2?.status === "ok") {
+        result.successCount++;
         console.log(`[push] Expo \u2713 token[${i2}]`);
       } else {
-        console.error(`[push] Expo \u2717 token[${i2}]:`, JSON.stringify(r2));
+        result.failureCount++;
+        const errMsg = JSON.stringify(r2);
+        result.errors.push({ token: tokens[i2]?.slice(0, 20) ?? "?", error: errMsg });
+        console.error(`[push] Expo \u2717 token[${i2}]:`, errMsg);
       }
     });
   } catch (e2) {
+    result.failureCount += tokens.length;
+    const errMsg = String(e2);
+    tokens.forEach((t2) => result.errors.push({ token: t2.slice(0, 20), error: errMsg }));
     console.error("[push] Expo send error:", e2);
   }
+  return result;
 }
 async function sendViaFcm(tokens, title, body, data, channelId) {
+  const result = { successCount: 0, failureCount: 0, errors: [] };
   let accessToken;
   try {
     accessToken = await getFcmAccessToken();
   } catch (e2) {
-    console.error("[push] FCM auth error:", e2);
-    return;
+    const errMsg = String(e2);
+    console.error("[push] FCM auth error:", errMsg);
+    tokens.forEach((t2) => result.errors.push({ token: t2.slice(0, 20), error: "auth_error: " + errMsg }));
+    result.failureCount = tokens.length;
+    return result;
   }
   for (const token of tokens) {
     try {
@@ -70786,9 +70799,13 @@ async function sendViaFcm(tokens, title, body, data, channelId) {
       });
       const json2 = await res.json();
       if (json2.name) {
-        console.log("[push] FCM v1 \u2713:", json2.name);
+        result.successCount++;
+        console.log(`[push] FCM v1 \u2713 name=${json2.name} token=${token.slice(0, 20)}...`);
       } else {
-        console.error("[push] FCM v1 \u2717:", JSON.stringify(json2));
+        result.failureCount++;
+        const errMsg = JSON.stringify(json2?.error ?? json2);
+        result.errors.push({ token: token.slice(0, 20), error: errMsg });
+        console.error(`[push] FCM v1 \u2717 token=${token.slice(0, 20)}... error=${errMsg}`);
         const errCode = json2?.error?.status;
         if (errCode === "NOT_FOUND" || errCode === "UNREGISTERED") {
           try {
@@ -70804,9 +70821,13 @@ async function sendViaFcm(tokens, title, body, data, channelId) {
         }
       }
     } catch (e2) {
-      console.error("[push] FCM send error:", e2);
+      result.failureCount++;
+      const errMsg = String(e2);
+      result.errors.push({ token: token.slice(0, 20), error: errMsg });
+      console.error(`[push] FCM send error token=${token.slice(0, 20)}...:`, e2);
     }
   }
+  return result;
 }
 async function sendPush(tokens, title, body, data, _priority = "high") {
   const valid = tokens.filter(
@@ -70814,7 +70835,7 @@ async function sendPush(tokens, title, body, data, _priority = "high") {
   );
   if (valid.length === 0) {
     console.log("[push] no tokens \u2014 skipping");
-    return;
+    return { successCount: 0, failureCount: 0, errors: [] };
   }
   const channelId = data?.channelId ?? "general";
   const stringData = { channelId, title, body };
@@ -70824,13 +70845,40 @@ async function sendPush(tokens, title, body, data, _priority = "high") {
   const expoTokens = valid.filter((t2) => t2.startsWith("ExponentPushToken["));
   const fcmTokens = valid.filter((t2) => !t2.startsWith("ExponentPushToken["));
   console.log(
-    `[push] "${title}" \u2192 expo:${expoTokens.length} fcm:${fcmTokens.length}`
+    `[push] "${title}" \u2192 expo:${expoTokens.length} fcm:${fcmTokens.length} channelId=${channelId}`
   );
-  await Promise.all([
-    expoTokens.length > 0 ? sendViaExpoPush(expoTokens, title, body, stringData) : Promise.resolve(),
-    fcmTokens.length > 0 ? sendViaFcm(fcmTokens, title, body, stringData, channelId) : Promise.resolve()
+  const [expoResult, fcmResult] = await Promise.all([
+    expoTokens.length > 0 ? sendViaExpoPush(expoTokens, title, body, stringData) : Promise.resolve({ successCount: 0, failureCount: 0, errors: [] }),
+    fcmTokens.length > 0 ? sendViaFcm(fcmTokens, title, body, stringData, channelId) : Promise.resolve({ successCount: 0, failureCount: 0, errors: [] })
   ]);
+  const combined = {
+    successCount: expoResult.successCount + fcmResult.successCount,
+    failureCount: expoResult.failureCount + fcmResult.failureCount,
+    errors: [...expoResult.errors, ...fcmResult.errors]
+  };
+  console.log(
+    `[push] done: success=${combined.successCount} failure=${combined.failureCount}` + (combined.errors.length ? ` errors=${JSON.stringify(combined.errors)}` : "")
+  );
+  return combined;
 }
+
+// src/lib/logger.ts
+var import_pino = __toESM(require_pino(), 1);
+var isProduction = process.env.NODE_ENV === "production";
+var logger = (0, import_pino.default)({
+  level: process.env.LOG_LEVEL ?? "info",
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "res.headers['set-cookie']"
+  ],
+  ...isProduction ? {} : {
+    transport: {
+      target: "pino-pretty",
+      options: { colorize: true }
+    }
+  }
+});
 
 // src/routes/trips.ts
 var router4 = (0, import_express4.Router)();
@@ -71051,6 +71099,7 @@ router4.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Trip not assigned to you" });
     return;
   }
+  logger.info({ tripId: id, captainUserId: req.userId, captainId: captainData.captain.id }, "TRIP_ACCEPT_REQUEST");
   let updated;
   try {
     updated = await db.transaction(async (tx) => {
@@ -71064,21 +71113,33 @@ router4.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     });
   } catch (e2) {
     if (e2.message === "TRIP_TAKEN") {
+      logger.info({ tripId: id, captainUserId: req.userId }, "TRIP_ACCEPT_CONFLICT_409");
       res.status(409).json({ error: "Trip already accepted by another captain" });
       return;
     }
     throw e2;
   }
+  logger.info({ tripId: id, captainId: captainData.captain.id, passengerId: updated.passengerId, status: updated.status }, "TRIP_ACCEPTED");
   const captainName = captainData.user?.name ?? "\u0627\u0644\u0643\u0627\u0628\u062A\u0646";
+  logger.info({ tripId: id, passengerId: updated.passengerId }, "PASSENGER_TOKEN_LOOKUP");
   const [passengerUser] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, updated.passengerId));
   if (passengerUser?.pushToken) {
-    await sendPush(
-      [passengerUser.pushToken],
-      "\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644 \u0631\u062D\u0644\u062A\u0643!",
-      `\u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0641\u064A \u0637\u0631\u064A\u0642\u0647 \u0625\u0644\u064A\u0643 \u0627\u0644\u0622\u0646`,
-      { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
-      "high"
-    );
+    logger.info({ tripId: id, passengerId: updated.passengerId, tokenPrefix: passengerUser.pushToken.slice(0, 20) }, "PASSENGER_TOKEN_FOUND");
+    logger.info({ tripId: id, passengerId: updated.passengerId, title: "\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644 \u0631\u062D\u0644\u062A\u0643!", channelId: "trip-updates" }, "PASSENGER_NOTIFICATION_SEND_START");
+    try {
+      const pushResult = await sendPush(
+        [passengerUser.pushToken],
+        "\u2705 \u062A\u0645 \u0642\u0628\u0648\u0644 \u0631\u062D\u0644\u062A\u0643!",
+        `\u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0641\u064A \u0637\u0631\u064A\u0642\u0647 \u0625\u0644\u064A\u0643 \u0627\u0644\u0622\u0646`,
+        { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
+        "high"
+      );
+      logger.info({ tripId: id, passengerId: updated.passengerId, success: pushResult.successCount, failure: pushResult.failureCount, errors: pushResult.errors }, "PASSENGER_NOTIFICATION_SEND_SUCCESS");
+    } catch (e2) {
+      logger.error({ tripId: id, passengerId: updated.passengerId, err: String(e2) }, "PASSENGER_NOTIFICATION_SEND_ERROR");
+    }
+  } else {
+    logger.error({ tripId: id, passengerId: updated.passengerId }, "PASSENGER_TOKEN_NOT_FOUND");
   }
   const otherRequests = await db.select({ captainId: tripRequestsTable.captainId }).from(tripRequestsTable).where(eq(tripRequestsTable.tripId, id));
   const otherCaptainIds = otherRequests.map((r2) => r2.captainId).filter((cid) => cid !== captainData.captain.id);
@@ -71087,14 +71148,20 @@ router4.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     const otherUserIds = otherCaptains.map((c) => c.userId);
     const otherUsers = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(or(...otherUserIds.map((uid) => eq(usersTable.id, uid))));
     const otherTokens = otherUsers.map((u) => u.pushToken).filter(Boolean);
+    logger.info({ tripId: id, otherCaptainCount: otherCaptainIds.length, tokensWithPush: otherTokens.length }, "OTHER_DRIVERS_NOTIFICATION_SEND_START");
     if (otherTokens.length > 0) {
-      await sendPush(
-        otherTokens,
-        "\u274C \u062A\u0645 \u0642\u0628\u0648\u0644 \u0627\u0644\u0631\u062D\u0644\u0629 \u0645\u0646 \u0633\u0627\u0626\u0642 \u0622\u062E\u0631",
-        `\u0642\u0628\u0644 \u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0647\u0630\u0647 \u0627\u0644\u0631\u062D\u0644\u0629`,
-        { type: "trip-taken", tripId: String(id), channelId: "trip-requests" },
-        "high"
-      );
+      try {
+        const otherResult = await sendPush(
+          otherTokens,
+          "\u274C \u062A\u0645 \u0642\u0628\u0648\u0644 \u0627\u0644\u0631\u062D\u0644\u0629 \u0645\u0646 \u0633\u0627\u0626\u0642 \u0622\u062E\u0631",
+          `\u0642\u0628\u0644 \u0627\u0644\u0643\u0627\u0628\u062A\u0646 ${captainName} \u0647\u0630\u0647 \u0627\u0644\u0631\u062D\u0644\u0629`,
+          { type: "trip-taken", tripId: String(id), channelId: "trip-requests" },
+          "high"
+        );
+        logger.info({ tripId: id, success: otherResult.successCount, failure: otherResult.failureCount, errors: otherResult.errors }, "OTHER_DRIVERS_NOTIFICATION_SEND_SUCCESS");
+      } catch (e2) {
+        logger.error({ tripId: id, err: String(e2) }, "OTHER_DRIVERS_NOTIFICATION_SEND_ERROR");
+      }
     }
   }
   res.json(await buildTripResponse(updated));
@@ -71137,21 +71204,34 @@ router4.patch("/trips/:id/start", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Not found" });
     return;
   }
+  logger.info({ tripId: id, captainUserId: req.userId, captainId: captainData.captain.id }, "TRIP_START_REQUEST");
   const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "accepted" || trip.captainId !== captainData.captain.id) {
+    logger.error({ tripId: id, currentStatus: trip?.status, tripCaptainId: trip?.captainId, myCaptainId: captainData.captain.id }, "TRIP_START_REJECTED");
     res.status(400).json({ error: "Cannot start this trip" });
     return;
   }
   const [updated] = await db.update(tripsTable).set({ status: "started", startedAt: /* @__PURE__ */ new Date() }).where(eq(tripsTable.id, trip.id)).returning();
+  logger.info({ tripId: id, captainId: captainData.captain.id, passengerId: trip.passengerId, status: updated?.status }, "TRIP_STARTED");
+  logger.info({ tripId: id, passengerId: trip.passengerId }, "PASSENGER_TOKEN_LOOKUP");
   const [startPassenger] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, trip.passengerId));
   if (startPassenger?.pushToken) {
-    await sendPush(
-      [startPassenger.pushToken],
-      "\u0628\u062F\u0623\u062A \u0631\u062D\u0644\u062A\u0643 \u{1F697}",
-      "\u0627\u0644\u0643\u0627\u0628\u062A\u0646 \u0627\u0646\u0637\u0644\u0642 \u0628\u0643 \u0627\u0644\u0622\u0646 \u2014 \u0627\u0633\u062A\u0645\u062A\u0639 \u0628\u0627\u0644\u0631\u062D\u0644\u0629!",
-      { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
-      "high"
-    );
+    logger.info({ tripId: id, passengerId: trip.passengerId, tokenPrefix: startPassenger.pushToken.slice(0, 20) }, "PASSENGER_TOKEN_FOUND");
+    logger.info({ tripId: id, passengerId: trip.passengerId, title: "\u0628\u062F\u0623\u062A \u0631\u062D\u0644\u062A\u0643 \u{1F697}", channelId: "trip-updates" }, "TRIP_STARTED_NOTIFICATION_SEND_START");
+    try {
+      const pushResult = await sendPush(
+        [startPassenger.pushToken],
+        "\u0628\u062F\u0623\u062A \u0631\u062D\u0644\u062A\u0643 \u{1F697}",
+        "\u0627\u0644\u0643\u0627\u0628\u062A\u0646 \u0627\u0646\u0637\u0644\u0642 \u0628\u0643 \u0627\u0644\u0622\u0646 \u2014 \u0627\u0633\u062A\u0645\u062A\u0639 \u0628\u0627\u0644\u0631\u062D\u0644\u0629!",
+        { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
+        "high"
+      );
+      logger.info({ tripId: id, passengerId: trip.passengerId, success: pushResult.successCount, failure: pushResult.failureCount, errors: pushResult.errors }, "TRIP_STARTED_NOTIFICATION_SEND_SUCCESS");
+    } catch (e2) {
+      logger.error({ tripId: id, passengerId: trip.passengerId, err: String(e2) }, "TRIP_STARTED_NOTIFICATION_SEND_ERROR");
+    }
+  } else {
+    logger.error({ tripId: id, passengerId: trip.passengerId }, "PASSENGER_TOKEN_NOT_FOUND");
   }
   res.json(await buildTripResponse(updated));
 });
@@ -71735,24 +71815,6 @@ router12.use(push_token_default);
 router12.use(routes_resource_default);
 router12.use(admin_default);
 var routes_default = router12;
-
-// src/lib/logger.ts
-var import_pino = __toESM(require_pino(), 1);
-var isProduction = process.env.NODE_ENV === "production";
-var logger = (0, import_pino.default)({
-  level: process.env.LOG_LEVEL ?? "info",
-  redact: [
-    "req.headers.authorization",
-    "req.headers.cookie",
-    "res.headers['set-cookie']"
-  ],
-  ...isProduction ? {} : {
-    transport: {
-      target: "pino-pretty",
-      options: { colorize: true }
-    }
-  }
-});
 
 // src/app.ts
 var app = (0, import_express13.default)();

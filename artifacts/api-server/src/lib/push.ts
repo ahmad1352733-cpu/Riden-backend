@@ -40,13 +40,25 @@ async function getFcmAccessToken(): Promise<string> {
   return tokenRes.token;
 }
 
+// ── Push Result ───────────────────────────────────────────────────────────────
+export interface PushResult {
+  /** عدد الـ tokens التي أُرسل إليها بنجاح */
+  successCount: number;
+  /** عدد الـ tokens التي فشل إرسالها */
+  failureCount: number;
+  /** تفاصيل الأخطاء لكل token */
+  errors: { token: string; error: string }[];
+}
+
 // ── Expo Push ─────────────────────────────────────────────────────────────────
 async function sendViaExpoPush(
   tokens: string[],
   title: string,
   body: string,
   data: Record<string, string>,
-): Promise<void> {
+): Promise<PushResult> {
+  const result: PushResult = { successCount: 0, failureCount: 0, errors: [] };
+
   const messages = tokens.map(to => ({
     to,
     title,
@@ -68,14 +80,23 @@ async function sendViaExpoPush(
 
     results.forEach((r, i) => {
       if (r?.status === "ok") {
+        result.successCount++;
         console.log(`[push] Expo ✓ token[${i}]`);
       } else {
-        console.error(`[push] Expo ✗ token[${i}]:`, JSON.stringify(r));
+        result.failureCount++;
+        const errMsg = JSON.stringify(r);
+        result.errors.push({ token: tokens[i]?.slice(0, 20) ?? "?", error: errMsg });
+        console.error(`[push] Expo ✗ token[${i}]:`, errMsg);
       }
     });
   } catch (e) {
+    result.failureCount += tokens.length;
+    const errMsg = String(e);
+    tokens.forEach(t => result.errors.push({ token: t.slice(0, 20), error: errMsg }));
     console.error("[push] Expo send error:", e);
   }
+
+  return result;
 }
 
 // ── FCM v1 ────────────────────────────────────────────────────────────────────
@@ -85,13 +106,18 @@ async function sendViaFcm(
   body: string,
   data: Record<string, string>,
   channelId: string,
-): Promise<void> {
+): Promise<PushResult> {
+  const result: PushResult = { successCount: 0, failureCount: 0, errors: [] };
+
   let accessToken: string;
   try {
     accessToken = await getFcmAccessToken();
   } catch (e) {
-    console.error("[push] FCM auth error:", e);
-    return;
+    const errMsg = String(e);
+    console.error("[push] FCM auth error:", errMsg);
+    tokens.forEach(t => result.errors.push({ token: t.slice(0, 20), error: "auth_error: " + errMsg }));
+    result.failureCount = tokens.length;
+    return result;
   }
 
   for (const token of tokens) {
@@ -123,9 +149,13 @@ async function sendViaFcm(
       const json = await res.json() as any;
 
       if (json.name) {
-        console.log("[push] FCM v1 ✓:", json.name);
+        result.successCount++;
+        console.log(`[push] FCM v1 ✓ name=${json.name} token=${token.slice(0, 20)}...`);
       } else {
-        console.error("[push] FCM v1 ✗:", JSON.stringify(json));
+        result.failureCount++;
+        const errMsg = JSON.stringify(json?.error ?? json);
+        result.errors.push({ token: token.slice(0, 20), error: errMsg });
+        console.error(`[push] FCM v1 ✗ token=${token.slice(0, 20)}... error=${errMsg}`);
 
         // امسح token المنتهي
         const errCode = json?.error?.status;
@@ -142,9 +172,14 @@ async function sendViaFcm(
         }
       }
     } catch (e) {
-      console.error("[push] FCM send error:", e);
+      result.failureCount++;
+      const errMsg = String(e);
+      result.errors.push({ token: token.slice(0, 20), error: errMsg });
+      console.error(`[push] FCM send error token=${token.slice(0, 20)}...:`, e);
     }
   }
+
+  return result;
 }
 
 // ── Main Export ───────────────────────────────────────────────────────────────
@@ -154,14 +189,14 @@ export async function sendPush(
   body:     string,
   data?:    Record<string, unknown>,
   _priority: "default" | "high" = "high",
-): Promise<void> {
+): Promise<PushResult> {
   const valid = tokens.filter(
     t => t && typeof t === "string" && t.length > 10
   ) as string[];
 
   if (valid.length === 0) {
     console.log("[push] no tokens — skipping");
-    return;
+    return { successCount: 0, failureCount: 0, errors: [] };
   }
 
   const channelId = (data?.channelId as string) ?? "general";
@@ -176,17 +211,30 @@ export async function sendPush(
   const fcmTokens  = valid.filter(t => !t.startsWith("ExponentPushToken["));
 
   console.log(
-    `[push] "${title}" → expo:${expoTokens.length} fcm:${fcmTokens.length}`
+    `[push] "${title}" → expo:${expoTokens.length} fcm:${fcmTokens.length} channelId=${channelId}`
   );
 
-  await Promise.all([
+  const [expoResult, fcmResult] = await Promise.all([
     expoTokens.length > 0
       ? sendViaExpoPush(expoTokens, title, body, stringData)
-      : Promise.resolve(),
+      : Promise.resolve<PushResult>({ successCount: 0, failureCount: 0, errors: [] }),
     fcmTokens.length > 0
       ? sendViaFcm(fcmTokens, title, body, stringData, channelId)
-      : Promise.resolve(),
+      : Promise.resolve<PushResult>({ successCount: 0, failureCount: 0, errors: [] }),
   ]);
+
+  const combined: PushResult = {
+    successCount: expoResult.successCount + fcmResult.successCount,
+    failureCount: expoResult.failureCount + fcmResult.failureCount,
+    errors: [...expoResult.errors, ...fcmResult.errors],
+  };
+
+  console.log(
+    `[push] done: success=${combined.successCount} failure=${combined.failureCount}` +
+    (combined.errors.length ? ` errors=${JSON.stringify(combined.errors)}` : "")
+  );
+
+  return combined;
 }
 
 export { sendPush as sendPushNotifications };
