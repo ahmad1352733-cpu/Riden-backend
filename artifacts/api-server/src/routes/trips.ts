@@ -298,16 +298,19 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
     res.status(403).json({ error: "Trip not assigned to you" }); return;
   }
 
+  console.log(`[TRIP_ACCEPTED] tripId=${id} captainUserId=${req.userId} captainId=${captainData.captain.id}`);
+
   // ── عملية ذرية: SELECT FOR UPDATE داخل Transaction لمنع القبول المزدوج ───
   let updated: typeof tripsTable.$inferSelect | undefined;
   try {
     updated = await db.transaction(async (tx) => {
-      // قفل الصف — أي كابتن آخر يحاول نفس العملية سينتظر حتى تنتهي هذه
       const [current] = await tx
         .select()
         .from(tripsTable)
         .where(eq(tripsTable.id, id))
         .for("update");
+
+      console.log(`[TRIP_ACCEPTED] current status=${current?.status} passengerId=${current?.passengerId}`);
 
       if (!current || current.status !== "pending") {
         throw new Error("TRIP_TAKEN");
@@ -320,10 +323,12 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
         .returning();
 
       if (!row) throw new Error("TRIP_TAKEN");
+      console.log(`[TRIP_ACCEPTED] DB updated → status=${row.status} passengerId=${row.passengerId}`);
       return row;
     });
   } catch (e: any) {
     if (e.message === "TRIP_TAKEN") {
+      console.log(`[TRIP_ACCEPTED] 409 — already taken`);
       res.status(409).json({ error: "Trip already accepted by another captain" });
       return;
     }
@@ -333,10 +338,12 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
   const captainName = captainData.user?.name ?? "الكابتن";
 
   // ── إشعار الراكب مع اسم الكابتن ──────────────────────────────────────────
+  console.log(`[NOTIFY_PASSENGER_TRIP_ACCEPTED] passengerId=${updated.passengerId}`);
   const [passengerUser] = await db
     .select({ pushToken: usersTable.pushToken })
     .from(usersTable)
     .where(eq(usersTable.id, updated.passengerId));
+  console.log(`[NOTIFY_PASSENGER_TRIP_ACCEPTED] token=${passengerUser?.pushToken ? passengerUser.pushToken.slice(0,20)+'...' : 'NULL'}`);
   if (passengerUser?.pushToken) {
     await sendPush(
       [passengerUser.pushToken],
@@ -345,9 +352,12 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high",
     );
+    console.log(`[NOTIFY_PASSENGER_TRIP_ACCEPTED] sendPush called ✓`);
+  } else {
+    console.warn(`[NOTIFY_PASSENGER_TRIP_ACCEPTED] ⚠️ NO TOKEN — skipped`);
   }
 
-  // ── إشعار الكباتن الآخرين بأن الرحلة قُبلت — يُزيلونها فوراً ───────────
+  // ── إشعار الكباتن الآخرين بأن الرحلة قُبلت ───────────────────────────────
   const otherRequests = await db
     .select({ captainId: tripRequestsTable.captainId })
     .from(tripRequestsTable)
@@ -355,6 +365,7 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
   const otherCaptainIds = otherRequests
     .map(r => r.captainId)
     .filter(cid => cid !== captainData.captain.id);
+  console.log(`[NOTIFY_OTHER_DRIVERS_TRIP_TAKEN] otherCaptainIds=${JSON.stringify(otherCaptainIds)}`);
 
   if (otherCaptainIds.length > 0) {
     const otherCaptains = await db
@@ -367,6 +378,7 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
       .from(usersTable)
       .where(or(...otherUserIds.map(uid => eq(usersTable.id, uid))));
     const otherTokens = otherUsers.map(u => u.pushToken).filter(Boolean) as string[];
+    console.log(`[NOTIFY_OTHER_DRIVERS_TRIP_TAKEN] tokens found=${otherTokens.length}`);
     if (otherTokens.length > 0) {
       await sendPush(
         otherTokens,
@@ -375,6 +387,7 @@ router.patch("/trips/:id/accept", requireAuth, async (req, res) => {
         { type: "trip-taken", tripId: String(id), channelId: "trip-requests" },
         "high",
       );
+      console.log(`[NOTIFY_OTHER_DRIVERS_TRIP_TAKEN] sendPush called ✓`);
     }
   }
 
@@ -412,8 +425,11 @@ router.patch("/trips/:id/start", requireAuth, async (req, res) => {
   const captainData = await getCaptainByUserId(req.userId!);
   if (!captainData) { res.status(403).json({ error: "Not found" }); return; }
 
+  console.log(`[TRIP_STARTED] tripId=${id} captainId=${captainData.captain.id}`);
+
   const [trip] = await db.select().from(tripsTable).where(eq(tripsTable.id, id));
   if (!trip || trip.status !== "accepted" || trip.captainId !== captainData.captain.id) {
+    console.log(`[TRIP_STARTED] ❌ check failed: status=${trip?.status} captainId=${trip?.captainId} expected=${captainData.captain.id}`);
     res.status(400).json({ error: "Cannot start this trip" }); return;
   }
 
@@ -423,11 +439,15 @@ router.patch("/trips/:id/start", requireAuth, async (req, res) => {
     .where(eq(tripsTable.id, trip.id))
     .returning();
 
+  console.log(`[TRIP_STARTED] DB updated → status=${updated?.status} passengerId=${trip.passengerId}`);
+
   // أبلغ الراكب أن الرحلة بدأت
+  console.log(`[NOTIFY_PASSENGER_TRIP_STARTED] passengerId=${trip.passengerId}`);
   const [startPassenger] = await db
     .select({ pushToken: usersTable.pushToken })
     .from(usersTable)
     .where(eq(usersTable.id, trip.passengerId));
+  console.log(`[NOTIFY_PASSENGER_TRIP_STARTED] token=${startPassenger?.pushToken ? startPassenger.pushToken.slice(0,20)+'...' : 'NULL'}`);
   if (startPassenger?.pushToken) {
     await sendPush(
       [startPassenger.pushToken],
@@ -436,6 +456,9 @@ router.patch("/trips/:id/start", requireAuth, async (req, res) => {
       { screen: "trip-update", tripId: String(id), channelId: "trip-updates" },
       "high",
     );
+    console.log(`[NOTIFY_PASSENGER_TRIP_STARTED] sendPush called ✓`);
+  } else {
+    console.warn(`[NOTIFY_PASSENGER_TRIP_STARTED] ⚠️ NO TOKEN — skipped`);
   }
 
   res.json(await buildTripResponse(updated));
